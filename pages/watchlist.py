@@ -1,3 +1,7 @@
+from store import PersistentDict
+
+DB_PATH = 'stocks_site_db'
+db = PersistentDict(DB_PATH)
 import streamlit as st
 import requests
 import os
@@ -19,15 +23,17 @@ def get_quote(symbol):
 
 def render_watchlist():
     st.title("Watchlist")
-    if "watchlist" not in st.session_state:
-        st.session_state["watchlist"] = []
-    if not st.session_state["watchlist"]:
+    watchlist = db.get('watchlist', {})
+    if not watchlist:
         st.info("No symbols in watchlist.")
     else:
-        for symbol in st.session_state["watchlist"]:
+        for symbol, item in watchlist.items():
             quote = get_quote(symbol)
             if quote:
                 st.write(f"**{symbol}**: {quote.get('price')} ({quote.get('changesPercentage')})")
+            else:
+                st.write(f"**{symbol}**: {item.get('name', '')}")
             if st.button(f"Remove {symbol}", key=f"remove_{symbol}"):
-                st.session_state["watchlist"].remove(symbol)
+                del watchlist[symbol]
+                db['watchlist'] = watchlist
                 st.experimental_rerun()

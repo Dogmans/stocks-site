@@ -1,3 +1,7 @@
+from store import PersistentDict
+
+DB_PATH = 'stocks_site_db'
+db = PersistentDict(DB_PATH)
 import streamlit as st
 import requests
 from dotenv import load_dotenv
@@ -64,7 +68,12 @@ def render_home():
         item = results[idx]
         logger.debug(f"Selected item: {item}")
         st.write(f"**{item['symbol']}**: {item.get('name', '')}")
-        # Type field removed as stock type is not retrieved
+        # Add to watchlist button
+        if st.button(f"Add {item['symbol']} to Watchlist", key=f"add_{item['symbol']}"):
+            watchlist = db.get('watchlist', {})
+            watchlist[item['symbol']] = item
+            db['watchlist'] = watchlist
+            st.success(f"Added {item['symbol']} to watchlist.")
         if st.button(f"View {item['symbol']}", key=f"view_{item['symbol']}"):
             logger.debug(f"View button clicked for: {item['symbol']}")
             st.session_state["detail_symbol"] = item['symbol']
