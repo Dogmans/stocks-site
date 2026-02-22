@@ -64,7 +64,7 @@ def render_home():
         item = results[idx]
         logger.debug(f"Selected item: {item}")
         st.write(f"**{item['symbol']}**: {item.get('name', '')}")
-        st.write(f"Type: {item.get('type', '')}")
+        # Type field removed as stock type is not retrieved
         if st.button(f"View {item['symbol']}", key=f"view_{item['symbol']}"):
             logger.debug(f"View button clicked for: {item['symbol']}")
             st.session_state["detail_symbol"] = item['symbol']
