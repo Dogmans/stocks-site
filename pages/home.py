@@ -68,12 +68,16 @@ def render_home():
         item = results[idx]
         logger.debug(f"Selected item: {item}")
         st.write(f"**{item['symbol']}**: {item.get('name', '')}")
-        # Add to watchlist button
-        if st.button(f"Add {item['symbol']} to Watchlist", key=f"add_{item['symbol']}"):
-            watchlist = db.get('watchlist', {})
-            watchlist[item['symbol']] = item
-            db['watchlist'] = watchlist
-            st.success(f"Added {item['symbol']} to watchlist.")
+        # Add to watchlist button, greyed out if already in watchlist
+        watchlist = db.get('watchlist', {})
+        in_watchlist = item['symbol'] in watchlist
+        if in_watchlist:
+            st.button(f"Add {item['symbol']} to Watchlist", key=f"add_{item['symbol']}", disabled=True, help="Already in watchlist")
+        else:
+            if st.button(f"Add {item['symbol']} to Watchlist", key=f"add_{item['symbol']}"):
+                watchlist[item['symbol']] = item
+                db['watchlist'] = watchlist
+                st.success(f"Added {item['symbol']} to watchlist.")
         if st.button(f"View {item['symbol']}", key=f"view_{item['symbol']}"):
             logger.debug(f"View button clicked for: {item['symbol']}")
             st.session_state["detail_symbol"] = item['symbol']
