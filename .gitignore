@@ -12,3 +12,4 @@ __pycache__/
 .vscode/
 
 stocks_site_db
+.pytest_cache/

@@ -102,19 +102,26 @@ def render_detail():
         params = {"apikey": API_KEY}
         resp = requests.get(filings_url, params=params)
         filings = resp.json() if resp.ok and resp.json() else []
-        if filings:
-            filings_sorted = sorted(filings, key=lambda x: x.get("date", ""), reverse=True)
+        # Filter filings based on actual API fields
+        valid_filings = [f for f in filings if f.get('fillingDate') and f.get('type') and f.get('link') and f.get('finalLink')]
+        if valid_filings:
+            filings_sorted = sorted(valid_filings, key=lambda x: x.get("fillingDate", ""), reverse=True)
             expanded = True
             for i, filing in enumerate(filings_sorted):
-                with st.expander(f"{filing.get('formType', 'Document')} — {filing.get('date', '')}", expanded=expanded):
-                    st.write(f"**Title:** {filing.get('title', '')}")
-                    st.write(f"**Date:** {filing.get('date', '')}")
-                    st.write(f"**Type:** {filing.get('formType', '')}")
-                    st.write(f"**Link:** [{filing.get('url', 'View')}]({filing.get('url', '')})")
-                    st.write(f"**Description:** {filing.get('description', '')}")
+                # Format date as yyyy-mm-dd
+                date_str = filing.get('fillingDate', '')[:10]
+                # Use type and name (if available) in the expander title
+                filing_type = filing.get('type', 'Document')
+                filing_name = filing.get('name', filing_type)
+                expander_title = f"{filing_type} ({filing_name}) — {date_str}"
+                with st.expander(expander_title, expanded=expanded):
+                    st.write(f"CIK: {filing.get('cik', 'N/A')}")
+                    st.write(f"Accepted: {filing.get('acceptedDate', 'N/A')}")
+                    st.write(f"[View Filing]({filing.get('link', '#')})")
+                    st.write(f"[Document Link]({filing.get('finalLink')})")
                 expanded = False
         else:
-            st.info("No filings/documents found for this symbol.")
+            st.info("No valid filings found for this symbol.")
 
     # News Tab
     with tabs[2]:
