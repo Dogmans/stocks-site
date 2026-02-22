@@ -20,6 +20,8 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 - Dynamically lists all available metrics from the API response.
 - Shows a chart for the selected metric over a selectable time period (day, week, month, year, 5 year).
 - Uses `pages/historical_utils.py` to fetch and display historical data.
+- Includes tabs for Filings (SEC filings, 10-K, 10-Q, etc.) and News, both retrieved from Financial Modeling Prep API.
+- Filings and news are displayed as accordions (expanders) with the latest expanded by default, using Streamlit components.
 
 ### 4. `pages/watchlist.py`
 - Loads the user's watchlist from the persistent store.
@@ -55,6 +57,7 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 - For historical price charts, select the `close` metric.
 - The persistent store is generic and can be used for other user preferences.
 - UI is built with Streamlit and is designed for clarity and ease of use.
+- Filings and news tabs use Financial Modeling Prep API endpoints (`/sec_filings/{symbol}` and `/stock_news?tickers={symbol}`) and Streamlit tabs/expanders for display.
 
 ---
 This documentation is intended to help both developers and LLMs understand the structure and implementation of the project for future development and maintenance.

@@ -8,6 +8,8 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 - Live market data and featured tickers
 - Watchlist management
 - Detailed company profiles and quotes
+- Filings/documents tab (SEC filings, 10-K, 10-Q, etc.) with accordion UI
+- News tab showing latest articles in accordion UI
 - Custom navigation and error handling
 
 ## Setup
@@ -29,6 +31,7 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 - Python virtual environment recommended (`.venv`)
 - Logging and error messages are shown in the frontend
 - `.gitignore` excludes cache, environment, and secrets
+- Filings and news are retrieved from Financial Modeling Prep API and displayed using Streamlit tabs and expanders (accordion style)
 
 ## Contributing
 Pull requests and issues are welcome.
