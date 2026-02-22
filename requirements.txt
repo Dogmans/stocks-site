@@ -1,0 +1,4 @@
+# Python dependencies for Stock & ETF Visualization App
+streamlit
+requests
+python-dotenv
