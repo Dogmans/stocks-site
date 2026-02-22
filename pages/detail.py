@@ -88,9 +88,10 @@ def render_detail():
             except (ValueError, TypeError):
                 return val
 
-        for k, v in quote.items():
-            if k != "price":
-                st.write(f"{k}: {format_metric(v)}")
+        metrics = [(k, format_metric(v)) for k, v in quote.items() if k != "price"]
+        import pandas as pd
+        df_metrics = pd.DataFrame(metrics, columns=["Metric", "Value"])
+        st.table(df_metrics.style.hide(axis="index"))
     st.markdown("---")
     from components.watchlist_button import watchlist_button
     watchlist_button(symbol, quote)
