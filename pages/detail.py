@@ -73,9 +73,24 @@ def render_detail():
 
         st.subheader("All Metrics")
         # Show all metrics except price at the top
+        def format_metric(val):
+            try:
+                num = float(val)
+                abs_num = abs(num)
+                if abs_num >= 1e9:
+                    return f"{num/1e9:.5g} bn"
+                elif abs_num >= 1e6:
+                    return f"{num/1e6:.5g} m"
+                elif abs_num >= 1e3:
+                    return f"{num/1e3:.5g} k"
+                else:
+                    return f"{num:.5g}"
+            except (ValueError, TypeError):
+                return val
+
         for k, v in quote.items():
             if k != "price":
-                st.write(f"{k}: {v}")
+                st.write(f"{k}: {format_metric(v)}")
     st.markdown("---")
     from components.watchlist_button import watchlist_button
     watchlist_button(symbol, quote)
