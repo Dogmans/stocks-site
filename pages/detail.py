@@ -41,10 +41,23 @@ def render_detail():
         st.write(f"Website: {profile.get('website', 'N/A')}")
     if quote:
         st.metric("Price", quote.get("price"), quote.get("changesPercentage"))
-        st.write(f"Market Cap: {quote.get('marketCap')}")
-        st.write(f"Volume: {quote.get('volume')}")
-        st.write(f"52 Week High: {quote.get('yearHigh')}")
-        st.write(f"52 Week Low: {quote.get('yearLow')}")
+        st.subheader("All Metrics")
+        # Show all metrics except price at the top
+        for k, v in quote.items():
+            if k != "price":
+                st.write(f"{k}: {v}")
+
+        st.markdown("---")
+        st.subheader("Metric History Chart")
+        metric_options = [k for k in quote.keys() if isinstance(quote[k], (int, float))]
+        selected_metric = st.selectbox("Select metric to chart", metric_options, index=0)
+        period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
+        from pages.historical_utils import get_historical
+        values, dates = get_historical(symbol, selected_metric, period)
+        if values and dates:
+            st.line_chart({selected_metric: values}, x=dates)
+        else:
+            st.info("No historical data available for this metric.")
     st.markdown("---")
     if st.button("Add to Watchlist"):
         if symbol not in st.session_state["watchlist"]:
