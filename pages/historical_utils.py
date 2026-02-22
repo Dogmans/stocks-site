@@ -10,14 +10,14 @@ API_BASE = "https://financialmodelingprep.com/api/v3"
 def get_historical(symbol, metric, period):
     # Map period to API params
     if period == "Day":
-        timeseries = 1
-        interval = "5min"
+        timeseries = 13  # 6.5 hours * 2 intervals per hour (30min)
+        interval = "30min"
     elif period == "Week":
-        timeseries = 5
+        timeseries = 65  # 5 trading days * 13 hours * 1 interval per 30min
         interval = "30min"
     elif period == "Month":
-        timeseries = 22
-        interval = "1hour"
+        timeseries = 22  # 22 trading days
+        interval = "1day"
     elif period == "Year":
         timeseries = 252
         interval = "1day"

@@ -41,25 +41,41 @@ def render_detail():
         st.write(f"Website: {profile.get('website', 'N/A')}")
     if quote:
         st.metric("Price", quote.get("price"), quote.get("changesPercentage"))
+        # Show historical chart for close price
+        st.markdown("---")
+        st.subheader("Price History")
+        period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
+        from pages.historical_utils import get_historical
+        values, dates = get_historical(symbol, "close", period)
+        if values and dates:
+            import pandas as pd
+            from datetime import datetime
+            import altair as alt
+            # Preserve time for day/week, use date for month/year/5year
+            if period in ["Day", "Week"]:
+                formatted_dates = dates  # Keep full datetime
+            else:
+                formatted_dates = [datetime.strptime(d, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") if len(d) > 10 else d for d in dates]
+            df = pd.DataFrame({"date": formatted_dates, "close": values})
+            df = df.set_index("date")
+            # Only label start and end
+            start_label = df.index[0]
+            end_label = df.index[-1]
+            # Altair chart for custom y-axis scaling, hide x-axis labels
+            chart = alt.Chart(df.reset_index()).mark_line().encode(
+                x=alt.X('date', axis=alt.Axis(labels=False, ticks=False)),
+                y=alt.Y('close', scale=alt.Scale(domain=[df['close'].min(), df['close'].max()]))
+            ).properties(width='container', height=300)
+            st.altair_chart(chart, use_container_width=True)
+            st.caption(f"{start_label} ... {end_label}")
+        else:
+            st.info("No historical data available for close price.")
+
         st.subheader("All Metrics")
         # Show all metrics except price at the top
         for k, v in quote.items():
             if k != "price":
                 st.write(f"{k}: {v}")
-
-        st.markdown("---")
-        st.subheader("Metric History Chart")
-        metric_options = [k for k in quote.keys() if isinstance(quote[k], (int, float))]
-        selected_metric = st.selectbox("Select metric to chart", metric_options, index=0)
-        period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
-        from pages.historical_utils import get_historical
-        values, dates = get_historical(symbol, selected_metric, period)
-        if values and dates:
-            st.line_chart({selected_metric: values}, x=dates)
-        else:
-            st.info("No historical data available for this metric.")
     st.markdown("---")
-    if st.button("Add to Watchlist"):
-        if symbol not in st.session_state["watchlist"]:
-            st.session_state["watchlist"].append(symbol)
-            st.success(f"Added {symbol} to watchlist.")
+    from components.watchlist_button import watchlist_button
+    watchlist_button(symbol, quote)
