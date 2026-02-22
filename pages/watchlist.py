@@ -29,22 +29,23 @@ def render_watchlist():
     else:
         for symbol, item in watchlist.items():
             quote = get_quote(symbol)
-            cols = st.columns([3, 1, 1])
+            cols = st.columns([6, 2])
             # Stock info
             with cols[0]:
                 if quote:
                     st.markdown(f"**{symbol}**: {quote.get('price')} ({quote.get('changesPercentage')})")
                 else:
                     st.markdown(f"**{symbol}**: {item.get('name', '')}")
-            # View button
+            # Right-justified buttons, minimal gap
             with cols[1]:
-                if st.button("View", key=f"view_{symbol}"):
+                btn_cols = st.columns([1, 1.2], gap="small")
+                view_clicked = btn_cols[0].button("View", key=f"view_{symbol}")
+                remove_clicked = btn_cols[1].button("Remove", key=f"remove_{symbol}")
+                if view_clicked:
                     st.session_state["detail_symbol"] = symbol
                     st.session_state["page"] = "Stock/ETF Detail"
                     st.rerun()
-            # Remove button
-            with cols[2]:
-                if st.button("Remove", key=f"remove_{symbol}"):
+                if remove_clicked:
                     del watchlist[symbol]
                     db['watchlist'] = watchlist
                     st.rerun()
