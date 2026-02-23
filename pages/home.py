@@ -69,7 +69,7 @@ def render_home():
         symbols = list(watchlist.keys())
         quotes = get_bulk_quotes(symbols)
         # Header row for alignment
-        cols = st.columns([2, 4, 2, 2.2, 2], gap="small")
+        cols = st.columns([2, 4, 2, 2], gap="small")
         with cols[0]:
             st.markdown("**Symbol**")
         with cols[1]:
@@ -77,11 +77,9 @@ def render_home():
         with cols[2]:
             st.markdown("**Price**")
         with cols[3]:
-            st.markdown("**% Change**")
-        with cols[4]:
             st.markdown("**Remove**")
         for symbol, item in sorted(watchlist.items()):
-            cols = st.columns([2, 4, 2, 2.2, 2], gap="small")
+            cols = st.columns([2, 4, 2, 2], gap="small")
             with cols[0]:
                 symbol_clicked = hyperlink_button(symbol, symbol)
                 if symbol_clicked:
@@ -94,18 +92,10 @@ def render_home():
                 from components.price_widget import price_widget
                 quote = quotes.get(symbol)
                 if quote:
-                    price_widget(quote.get('price'), None, size='small')
+                    price_widget(quote.get('price'), quote.get('changesPercentage'), size='small')
                 else:
                     st.markdown(":-")
             with cols[3]:
-                if quote and quote.get('changesPercentage') is not None:
-                    pct = quote.get('changesPercentage')
-                    color = "green" if pct > 0 else ("red" if pct < 0 else "gray")
-                    arrow = "▲" if pct > 0 else ("▼" if pct < 0 else "")
-                    st.markdown(f'<span style="color:{color}">{arrow} {pct:+.2f}%</span>', unsafe_allow_html=True)
-                else:
-                    st.markdown(":-")
-            with cols[4]:
                 remove_clicked = st.button("Remove", key=f"watchlist_remove_{symbol}")
             if 'remove_clicked' in locals() and remove_clicked:
                 del watchlist[symbol]

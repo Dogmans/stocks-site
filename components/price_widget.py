@@ -20,6 +20,9 @@ def price_widget(price, change_pct, size='default'):
     arrow = '▲' if change > 0 else ('▼' if change < 0 else '')
     color = 'green' if change > 0 else ('red' if change < 0 else 'gray')
     price_str = f"{price:.2f}" if isinstance(price, float) else str(price)
-    change_str = f"{arrow} {change:.2f}%" if arrow else f"{change:.2f}%"
+    if arrow:
+        change_str = f"{arrow}&nbsp;{change:.2f}%"
+    else:
+        change_str = f"{change:.2f}%"
     style = f"color:{color}; font-size:{'1.2em' if size=='default' else '1em'}; font-weight:bold;"
     st.markdown(f"<span>Price: {price_str} <span style='color:{color}'>{change_str}</span></span>", unsafe_allow_html=True)
