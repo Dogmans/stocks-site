@@ -1,31 +1,23 @@
 import streamlit as st
-import uuid
 
-def hyperlink_button(label, key, help=None):
+def hyperlink_button(label, symbol, page="Stock/ETF Detail"):
     """
-    Renders a Streamlit button styled as a hyperlink (only this button).
-    Returns True if clicked, else False.
+    Renders a true hyperlink that, when clicked, sets session state for navigation.
+    Returns True if this link was just clicked (i.e., query param matches), else False.
     """
-    # Generate a unique HTML id for this button
-    html_id = f"hyperlink-btn-{uuid.uuid4().hex}"
-    # Render the button as HTML and use st.markdown for the style
-    button_html = f"""
-    <style>
-    #{html_id} {{
-        background: none !important;
-        color: #1a73e8;
-        border: none;
-        padding: 0;
-        font-size: 1em;
-        text-decoration: underline;
-        cursor: pointer;
-    }}
-    </style>
-    <button id="{html_id}" type="submit">{label}</button>
-    """
-    # Use a form to capture the click event
-    form_key = f"form_{key}"
-    with st.form(form_key):
-        st.markdown(button_html, unsafe_allow_html=True)
-        submitted = st.form_submit_button(label=" ", help=help)
-    return submitted
+    import urllib.parse
+    # Encode the symbol and page for the URL
+    url = f"?detail_symbol={urllib.parse.quote(symbol)}&page={urllib.parse.quote(page)}"
+    st.markdown(f'<a href="{url}" style="color:#1a73e8;text-decoration:underline;">{label}</a>', unsafe_allow_html=True)
+    # Check if the query params match this symbol and page
+    query_params = st.query_params
+    if (
+        query_params.get("detail_symbol", [None]) == symbol and
+        query_params.get("page", [None]) == page
+    ):
+        st.session_state["detail_symbol"] = symbol
+        st.session_state["page"] = page
+        query_params.clear()  # Clear query params to prevent repeated triggers
+        st.rerun()
+        return True
+    return False

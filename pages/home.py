@@ -68,16 +68,9 @@ def render_home():
         idx = options.index(selected)
         item = results[idx]
         logger.debug(f"Selected item: {item}")
-        # Symbol as a button styled as a hyperlink, and name on same line
-        cols = st.columns([2, 6])
-        with cols[0]:
-            symbol_clicked = hyperlink_button(item['symbol'], key=f"search_symbol_{item['symbol']}", help="View details")
-        with cols[1]:
-            st.markdown(f"{item.get('name', '')}")
-        if symbol_clicked:
-            st.session_state["detail_symbol"] = item['symbol']
-            st.session_state["page"] = "Stock/ETF Detail"
-            st.rerun()
+        # Symbol as a hyperlink (true link)
+        symbol_clicked = hyperlink_button(item['symbol'], item['symbol'])
+        # ...existing code...
         # Add to watchlist button below (standard button, not hyperlink style)
         watchlist = db.get('watchlist', {})
         in_watchlist = item['symbol'] in watchlist
@@ -112,8 +105,8 @@ def render_home():
             quote = get_quote(symbol)
             cols = st.columns([2, 4, 3, 2.2], gap="small")
             with cols[0]:
-                # Symbol as a button styled as a hyperlink
-                symbol_clicked = hyperlink_button(symbol, key=f"watchlist_symbol_{symbol}", help="View details")
+                # Symbol as a hyperlink (true link)
+                symbol_clicked = hyperlink_button(symbol, symbol)
                 if symbol_clicked:
                     st.session_state["detail_symbol"] = symbol
                     st.session_state["page"] = "Stock/ETF Detail"
