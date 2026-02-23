@@ -126,20 +126,5 @@ def render_detail():
 
     # News Tab
     with tabs[2]:
-        st.subheader("Latest News")
-        news_url = f"{API_BASE}/stock_news"
-        params = {"tickers": symbol, "limit": 10, "apikey": API_KEY}
-        resp = requests.get(news_url, params=params)
-        news = resp.json() if resp.ok and resp.json() else []
-        if news:
-            news_sorted = sorted(news, key=lambda x: x.get("publishedDate", ""), reverse=True)
-            expanded = True
-            for i, article in enumerate(news_sorted):
-                with st.expander(f"{article.get('title', 'News')} — {article.get('publishedDate', '')}", expanded=expanded):
-                    st.write(f"**Source:** {article.get('site', '')}")
-                    st.write(f"**Date:** {article.get('publishedDate', '')}")
-                    st.write(f"**Link:** [{article.get('url', 'Read')}]({article.get('url', '')})")
-                    st.write(f"**Summary:** {article.get('text', '')}")
-                expanded = False
-        else:
-            st.info("No news articles found for this symbol.")
+        from components.news_feed import news_feed
+        news_feed(symbols=symbol, max_articles=10, today_only=False, show_header=True)

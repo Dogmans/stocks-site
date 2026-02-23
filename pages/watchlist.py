@@ -53,3 +53,9 @@ def render_watchlist():
                 del watchlist[symbol]
                 db['watchlist'] = watchlist
                 st.rerun()
+
+        # News feed for all watchlist stocks (today's news)
+        from components.news_feed import news_feed
+        st.markdown("---")
+        symbols = list(watchlist.keys())
+        news_feed(symbols=symbols, max_articles=10, today_only=True, show_header=True)
