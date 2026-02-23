@@ -1,49 +1,15 @@
 from store import PersistentDict
 from components.hyperlink_button import hyperlink_button
+from fmp_api import get_bulk_quotes, search_symbol
 
 DB_PATH = 'stocks_site_db'
 db = PersistentDict(DB_PATH)
 import streamlit as st
-import requests
-from dotenv import load_dotenv
-import os
 import logging
 
 # Set up logging
 logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
-
-load_dotenv()
-API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-API_BASE = "https://financialmodelingprep.com/api/v3"
-
-# Helper functions
-
-def search_symbol(query, types=("stock", "etf", "index")):
-    logger.debug(f"search_symbol called with query={query}, types={types}")
-    url = f"{API_BASE}/search"
-    params = {"query": query, "apikey": API_KEY, "limit": 10}
-    logger.debug(f"API_KEY: {API_KEY}")
-    logger.debug(f"API request URL: {url}, params: {params}")
-    try:
-        if not API_KEY:
-            logger.error("API key is missing. Please set FINANCIAL_MODELING_PREP_API_KEY in your .env file.")
-            st.error("API key is missing. Please set FINANCIAL_MODELING_PREP_API_KEY in your .env file.")
-            return []
-        resp = requests.get(url, params=params)
-        logger.debug(f"API response status: {resp.status_code}, reason: {resp.reason}")
-        logger.debug(f"API response text: {resp.text}")
-        if resp.ok:
-            results = resp.json()
-            logger.debug(f"API results: {results}")
-            return results
-        else:
-            logger.error(f"API request failed: {resp.status_code} {resp.reason}")
-            st.error(f"API request failed: {resp.status_code} {resp.reason}")
-    except Exception as e:
-        logger.exception(f"Error fetching results: {e}")
-        st.error(f"Error fetching results: {e}")
-    return []
 
 # Home page
 
@@ -69,8 +35,15 @@ def render_home():
         item = results[idx]
         logger.debug(f"Selected item: {item}")
         # Symbol as a hyperlink (true link)
-        symbol_clicked = hyperlink_button(item['symbol'], item['symbol'])
-        # ...existing code...
+        cols = st.columns([2, 6])
+        with cols[0]:
+            symbol_clicked = hyperlink_button(item['symbol'], item['symbol'])
+        with cols[1]:
+            st.markdown(f"{item.get('name', '')}")
+        if symbol_clicked:
+            st.session_state["detail_symbol"] = item['symbol']
+            st.session_state["page"] = "Stock/ETF Detail"
+            st.rerun()
         # Add to watchlist button below (standard button, not hyperlink style)
         watchlist = db.get('watchlist', {})
         in_watchlist = item['symbol'] in watchlist
@@ -85,7 +58,6 @@ def render_home():
         logger.debug("No results found for query")
         st.error("No results found.")
 
-
     # --- Watchlist Section (replaces featured stocks) ---
     st.markdown("---")
     st.subheader("Your Watchlist")
@@ -93,19 +65,11 @@ def render_home():
     if not watchlist:
         st.info("No symbols in watchlist.")
     else:
+        symbols = list(watchlist.keys())
+        quotes = get_bulk_quotes(symbols)
         for symbol, item in sorted(watchlist.items()):
-            # Inline import to avoid circular import
-            def get_quote(symbol):
-                url = f"{API_BASE}/quote/{symbol}"
-                params = {"apikey": API_KEY}
-                resp = requests.get(url, params=params)
-                if resp.ok and resp.json():
-                    return resp.json()[0]
-                return None
-            quote = get_quote(symbol)
             cols = st.columns([2, 4, 3, 2.2], gap="small")
             with cols[0]:
-                # Symbol as a hyperlink (true link)
                 symbol_clicked = hyperlink_button(symbol, symbol)
                 if symbol_clicked:
                     st.session_state["detail_symbol"] = symbol
@@ -115,6 +79,7 @@ def render_home():
                 st.markdown(f"{item.get('name', '')}")
             with cols[2]:
                 from components.price_widget import price_widget
+                quote = quotes.get(symbol)
                 if quote:
                     price_widget(quote.get('price'), quote.get('changesPercentage'), size='small')
                 else:
@@ -129,7 +94,6 @@ def render_home():
         # News feed for all watchlist stocks (today's news)
         from components.news_feed import news_feed
         st.markdown("---")
-        symbols = list(watchlist.keys())
         news_feed(symbols=symbols, max_articles=10, today_only=True, show_header=True)
 
     st.markdown("---")
