@@ -35,7 +35,33 @@ def render_detail():
     st.header(f"{symbol}")
     if profile:
         st.subheader(profile.get("companyName", ""))
-        st.write(profile.get("description", ""))
+        description = profile.get("description", "")
+        preview = description[:200] + "..."
+        st.markdown(
+            f"""
+            <style>
+                /* When the details tag is open, hide the summary (the preview) */
+                details[open] > summary {{
+                    display: none;
+                }}
+                
+                summary.custom-box {{
+                    padding: 10px;
+                    cursor: pointer;
+                    margin-bottom: 16px;
+                }}
+            </style>
+            <details>
+                <summary class="custom-box">
+                    {preview} <span style="font-size: 0.8em; color: gray;">(click to expand)</span>
+                </summary>
+                <p style="margin-top: 10px; padding: 10px; background-color: #f0f2f6; border-radius: 5px;">
+                    {description}
+                </p>
+            </details>
+            """,
+            unsafe_allow_html=True
+        )
         st.write(f"Sector: {profile.get('sector', 'N/A')}")
         st.write(f"Industry: {profile.get('industry', 'N/A')}")
         st.write(f"Website: {profile.get('website', 'N/A')}")
