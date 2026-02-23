@@ -2,15 +2,12 @@ import streamlit as st
 from pages.home import render_home
 from pages.markets import render_markets
 from pages.detail import render_detail
-from pages.watchlist import render_watchlist
-
 st.set_page_config(page_title="Stock & ETF Visualizer", layout="wide")
 
 PAGES = {
     "Home": render_home,
     "Markets Overview": render_markets,
-    "Stock/ETF Detail": render_detail,
-    "Watchlist": render_watchlist
+    "Stock/ETF Detail": render_detail
 }
 
 # Set default page in session state
