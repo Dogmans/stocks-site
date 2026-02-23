@@ -1,4 +1,5 @@
 from store import PersistentDict
+from components.hyperlink_button import hyperlink_button
 
 DB_PATH = 'stocks_site_db'
 db = PersistentDict(DB_PATH)
@@ -68,7 +69,7 @@ def render_home():
         item = results[idx]
         logger.debug(f"Selected item: {item}")
         # Symbol as a button styled as a hyperlink
-        symbol_clicked = st.button(item['symbol'], key=f"search_symbol_{item['symbol']}", help="View details")
+        symbol_clicked = hyperlink_button(item['symbol'], key=f"search_symbol_{item['symbol']}", help="View details")
         st.write(f": {item.get('name', '')}")
         if symbol_clicked:
             st.session_state["detail_symbol"] = item['symbol']
@@ -113,7 +114,7 @@ def render_home():
             cols = st.columns([2, 4, 3, 2.2], gap="small")
             with cols[0]:
                 # Symbol as a button styled as a hyperlink
-                symbol_clicked = st.button(symbol, key=f"watchlist_symbol_{symbol}", help="View details")
+                symbol_clicked = hyperlink_button(symbol, key=f"watchlist_symbol_{symbol}", help="View details")
                 if symbol_clicked:
                     st.session_state["detail_symbol"] = symbol
                     st.session_state["page"] = "Stock/ETF Detail"
