@@ -29,23 +29,27 @@ def render_watchlist():
     else:
         for symbol, item in watchlist.items():
             quote = get_quote(symbol)
-            cols = st.columns([6, 2])
-            # Stock info
+            # Layout: Symbol | Name | Price widget | View | Remove (all in one row)
+            cols = st.columns([2, 4, 2, 1, 1.2], gap="small")
             with cols[0]:
-                if quote:
-                    st.markdown(f"**{symbol}**: {quote.get('price')} ({quote.get('changesPercentage')})")
-                else:
-                    st.markdown(f"**{symbol}**: {item.get('name', '')}")
-            # Right-justified buttons, minimal gap
+                st.markdown(f"**{symbol}**")
             with cols[1]:
-                btn_cols = st.columns([1, 1.2], gap="small")
-                view_clicked = btn_cols[0].button("View", key=f"view_{symbol}")
-                remove_clicked = btn_cols[1].button("Remove", key=f"remove_{symbol}")
-                if view_clicked:
-                    st.session_state["detail_symbol"] = symbol
-                    st.session_state["page"] = "Stock/ETF Detail"
-                    st.rerun()
-                if remove_clicked:
-                    del watchlist[symbol]
-                    db['watchlist'] = watchlist
-                    st.rerun()
+                st.markdown(f"{item.get('name', '')}")
+            with cols[2]:
+                from components.price_widget import price_widget
+                if quote:
+                    price_widget(quote.get('price'), quote.get('changesPercentage'), size='small')
+                else:
+                    st.markdown(":-")
+            with cols[3]:
+                view_clicked = st.button("View", key=f"view_{symbol}")
+            with cols[4]:
+                remove_clicked = st.button("Remove", key=f"remove_{symbol}")
+            if 'view_clicked' in locals() and view_clicked:
+                st.session_state["detail_symbol"] = symbol
+                st.session_state["page"] = "Stock/ETF Detail"
+                st.rerun()
+            if 'remove_clicked' in locals() and remove_clicked:
+                del watchlist[symbol]
+                db['watchlist'] = watchlist
+                st.rerun()

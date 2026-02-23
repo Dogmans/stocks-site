@@ -44,7 +44,8 @@ def render_detail():
 
     with tabs[0]:
         if quote:
-            st.metric("Price", quote.get("price"), quote.get("changesPercentage"))
+            from components.price_widget import price_widget
+            price_widget(quote.get("price"), quote.get("changesPercentage"), size='default')
             st.markdown("---")
             st.subheader("Price History")
             period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
