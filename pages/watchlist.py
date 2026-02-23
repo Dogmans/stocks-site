@@ -30,7 +30,7 @@ def render_watchlist():
         for symbol, item in watchlist.items():
             quote = get_quote(symbol)
             # Layout: Symbol | Name | Price widget | View | Remove (all in one row)
-            cols = st.columns([2, 4, 2, 1, 1.2], gap="small")
+            cols = st.columns([2, 4, 3, 2, 2.2], gap="small")
             with cols[0]:
                 st.markdown(f"**{symbol}**")
             with cols[1]:
