@@ -1,12 +1,6 @@
 import streamlit as st
-import requests
-import os
 from datetime import datetime
-from dotenv import load_dotenv
-
-load_dotenv()
-API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-API_BASE = "https://financialmodelingprep.com/api/v3"
+from fmp_api import get_news
 
 def news_feed(symbols, max_articles=10, today_only=False, show_header=True):
     """
@@ -23,36 +17,14 @@ def news_feed(symbols, max_articles=10, today_only=False, show_header=True):
         st.info("No symbols provided for news feed.")
         return
 
-    # If only one symbol, use old logic for efficiency
-    if len(symbols) == 1:
-        tickers = symbols[0]
-        url = f"{API_BASE}/stock_news"
-        params = {"tickers": tickers, "limit": max_articles, "apikey": API_KEY}
-        resp = requests.get(url, params=params)
-        news = resp.json() if resp.ok and resp.json() else []
-        if today_only:
-            today_str = datetime.now().strftime("%Y-%m-%d")
-            news = [n for n in news if n.get("publishedDate", "").startswith(today_str)]
-    else:
-        # For multiple symbols, fetch per-symbol and collate
-        all_articles = []
-        seen_urls = set()
-        today_str = datetime.now().strftime("%Y-%m-%d") if today_only else None
-        for symbol in symbols:
-            url = f"{API_BASE}/stock_news"
-            params = {"tickers": symbol, "limit": max_articles, "apikey": API_KEY}
-            resp = requests.get(url, params=params)
-            articles = resp.json() if resp.ok and resp.json() else []
-            if today_only:
-                articles = [n for n in articles if n.get("publishedDate", "").startswith(today_str)]
-            for article in articles:
-                # Deduplicate by URL
-                url_key = article.get("url")
-                if url_key and url_key not in seen_urls:
-                    all_articles.append(article)
-                    seen_urls.add(url_key)
-        news = all_articles
-
+    news = get_news(symbols, max_articles)
+    if today_only:
+        today_str = datetime.now().strftime("%Y-%m-%d")
+        news = [n for n in news if n.get("publishedDate", "").startswith(today_str)]
+    if not news:
+        st.info("No news articles found for the selected symbols.")
+        return
+    
     # Sort and limit total articles for display
     news_sorted = sorted(news, key=lambda x: x.get("publishedDate", ""), reverse=True)
     if len(symbols) > 1:
