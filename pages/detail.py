@@ -125,10 +125,8 @@ def render_detail():
     # Filings Tab
     with tabs[1]:
         st.subheader("Filings & Documents")
-        filings_url = f"{API_BASE}/sec_filings/{symbol}"
-        params = {"apikey": API_KEY}
-        resp = requests.get(filings_url, params=params)
-        filings = resp.json() if resp.ok and resp.json() else []
+        from fmp_api import get_filings
+        filings = get_filings(symbol)
         # Filter filings based on actual API fields
         valid_filings = [f for f in filings if f.get('fillingDate') and f.get('type') and f.get('link') and f.get('finalLink')]
         if valid_filings:

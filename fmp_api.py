@@ -1,3 +1,22 @@
+def get_filings(symbol):
+    """
+    Fetch SEC filings for a given symbol from FMP API.
+    Args:
+        symbol (str): Stock ticker symbol.
+    Returns:
+        list: List of filings dictionaries.
+    """
+    from dotenv import load_dotenv
+    import os
+    load_dotenv()
+    API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
+    API_BASE = "https://financialmodelingprep.com/api/v3"
+    url = f"{API_BASE}/sec_filings/{symbol}"
+    params = {"apikey": API_KEY}
+    resp = requests.get(url, params=params)
+    if resp.ok and resp.json():
+        return resp.json()
+    return []
 from dotenv import load_dotenv
 import requests
 import os
