@@ -1,6 +1,7 @@
 from store import PersistentDict
 from components.hyperlink_button import hyperlink_button
 from fmp_api import get_bulk_quotes, search_symbol
+from queries import handle_query_params
 
 DB_PATH = 'stocks_site_db'
 db = PersistentDict(DB_PATH)
@@ -12,9 +13,9 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(mes
 logger = logging.getLogger(__name__)
 
 # Home page
-
 def render_home():
     logger.debug("render_home called")
+    handle_query_params()  # Sync query params to session state on page load
     st.title("Stock & ETF Visualizer")
     st.write("Quickly view stocks, ETFs, and indices with live data from Financial Modeling Prep.")
 
