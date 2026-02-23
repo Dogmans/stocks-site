@@ -68,27 +68,26 @@ def render_home():
         idx = options.index(selected)
         item = results[idx]
         logger.debug(f"Selected item: {item}")
-        # Symbol as a button styled as a hyperlink
-        symbol_clicked = hyperlink_button(item['symbol'], key=f"search_symbol_{item['symbol']}", help="View details")
-        st.write(f": {item.get('name', '')}")
+        # Symbol as a button styled as a hyperlink, and name on same line
+        cols = st.columns([2, 6])
+        with cols[0]:
+            symbol_clicked = hyperlink_button(item['symbol'], key=f"search_symbol_{item['symbol']}", help="View details")
+        with cols[1]:
+            st.markdown(f"{item.get('name', '')}")
         if symbol_clicked:
             st.session_state["detail_symbol"] = item['symbol']
             st.session_state["page"] = "Stock/ETF Detail"
             st.rerun()
-        # Style the button to look like a link
-        st.markdown("""
-            <style>
-            div[data-testid="stButton"] button {
-                background: none !important;
-                color: #1a73e8;
-                border: none;
-                padding: 0;
-                font-size: 1em;
-                text-decoration: underline;
-                cursor: pointer;
-            }
-            </style>
-        """, unsafe_allow_html=True)
+        # Add to watchlist button below (standard button, not hyperlink style)
+        watchlist = db.get('watchlist', {})
+        in_watchlist = item['symbol'] in watchlist
+        if in_watchlist:
+            st.button("Add to Watchlist", key=f"add_{item['symbol']}", disabled=True, help="Already in watchlist")
+        else:
+            if st.button("Add to Watchlist", key=f"add_{item['symbol']}"):
+                watchlist[item['symbol']] = item
+                db['watchlist'] = watchlist
+                st.success(f"Added {item['symbol']} to watchlist.")
     elif query:
         logger.debug("No results found for query")
         st.error("No results found.")
@@ -119,21 +118,6 @@ def render_home():
                     st.session_state["detail_symbol"] = symbol
                     st.session_state["page"] = "Stock/ETF Detail"
                     st.rerun()
-            # Style the button to look like a link (inject only once)
-            if symbol == sorted(watchlist.keys())[0]:
-                st.markdown("""
-                    <style>
-                    div[data-testid="stButton"] button {
-                        background: none !important;
-                        color: #1a73e8;
-                        border: none;
-                        padding: 0;
-                        font-size: 1em;
-                        text-decoration: underline;
-                        cursor: pointer;
-                    }
-                    </style>
-                """, unsafe_allow_html=True)
             with cols[1]:
                 st.markdown(f"{item.get('name', '')}")
             with cols[2]:
