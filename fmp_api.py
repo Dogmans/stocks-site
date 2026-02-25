@@ -5,10 +5,21 @@ from pydantic import BaseModel
 from config import API_KEY, API_BASE
 
 
+def make_authorised_request(url, params=None):
+    """
+    Helper to make a GET request with API key injected into params.
+    Returns the response object.
+    """
+    if params is None:
+        params = {}
+    params = dict(params)  # copy to avoid mutating caller
+    params["apikey"] = API_KEY
+    return requests.get(url, params=params)
+
+
 def get_quote(symbol):
     url = f"{API_BASE}/quote/{symbol}"
-    params = {"apikey": API_KEY}
-    resp = requests.get(url, params=params)
+    resp = make_authorised_request(url)
     if resp.ok and resp.json():
         return resp.json()[0]
     return None
@@ -16,8 +27,7 @@ def get_quote(symbol):
 
 def get_profile(symbol):
     url = f"{API_BASE}/profile/{symbol}"
-    params = {"apikey": API_KEY}
-    resp = requests.get(url, params=params)
+    resp = make_authorised_request(url)
     if resp.ok and resp.json():
         return resp.json()[0]
     return None
@@ -32,8 +42,8 @@ def get_filings(symbol):
         list: List of filings dictionaries.
     """
     url = f"{API_BASE}/sec-filings-search/symbol"
-    params = {"symbol": symbol, "apikey": API_KEY}
-    resp = requests.get(url, params=params)
+    params = {"symbol": symbol}
+    resp = make_authorised_request(url, params)
     if resp.ok and resp.json():
         return resp.json()
     return []
@@ -60,8 +70,7 @@ def get_historical(symbol, metric, period):
         timeseries = 1
         interval = "5min"
     url = f"{API_BASE}/historical-chart/{interval}/{symbol}"
-    params = {"apikey": API_KEY}
-    resp = requests.get(url, params=params)
+    resp = make_authorised_request(url)
     if resp.ok and resp.json():
         data = resp.json()[:timeseries]
         return [d[metric] for d in data if metric in d], [d["date"] for d in data if metric in d]
@@ -81,16 +90,16 @@ def get_news(symbols, max_articles=10):
     if len(symbols) == 1:
         tickers = symbols[0]
         url = f"{API_BASE}/news/stock"
-        params = {"symbols": tickers, "limit": max_articles, "apikey": API_KEY}
-        resp = requests.get(url, params=params)
+        params = {"symbols": tickers, "limit": max_articles}
+        resp = make_authorised_request(url, params)
         news = resp.json() if resp.ok and resp.json() else []
     else:
         all_articles = []
         seen_urls = set()
         for symbol in symbols:
             url = f"{API_BASE}/news/stock"
-            params = {"symbols": symbol, "limit": max_articles, "apikey": API_KEY}
-            resp = requests.get(url, params=params)
+            params = {"symbols": symbol, "limit": max_articles}
+            resp = make_authorised_request(url, params)
             articles = resp.json() if resp.ok and resp.json() else []
             for article in articles:
                 url_key = article.get("url")
@@ -136,13 +145,13 @@ def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None)
             "name": "Stock Split"
         },
     ]
-    params={"apikey": API_KEY}
+    params = {}
     if from_date:
         params["from"] = from_date.isoformat() if isinstance(from_date, date) else from_date
     if to_date:
         params["to"] = to_date.isoformat() if isinstance(to_date, date) else to_date
     for src in event_sources:
-        resp = requests.get(src["url"], params=params)
+        resp = make_authorised_request(src["url"], params)
         if resp.ok and resp.json():
             for item in resp.json():
                 events.append(Event(
@@ -166,8 +175,8 @@ def get_bulk_quotes(symbols):
     if not symbols:
         return {}
     url = f"{API_BASE}/batch-quote"
-    params = {"symbols": ','.join(symbols), "apikey": API_KEY}
-    resp = requests.get(url, params=params)
+    params = {"symbols": ','.join(symbols)}
+    resp = make_authorised_request(url, params)
     if resp.ok:
         quotes = resp.json()
         return {q['symbol']: q for q in quotes}
@@ -176,8 +185,8 @@ def get_bulk_quotes(symbols):
 
 def search_symbol(query):
     url = f"{API_BASE}/search-symbol"
-    params = {"query": query, "apikey": API_KEY, "limit": 10}
-    resp = requests.get(url, params=params)
+    params = {"query": query, "limit": 10}
+    resp = make_authorised_request(url, params)
     if resp.ok:
         return resp.json()
     return []
