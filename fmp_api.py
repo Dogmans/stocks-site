@@ -1,4 +1,5 @@
-from datetime import date
+
+import datetime
 import requests
 
 from pydantic import BaseModel
@@ -49,7 +50,30 @@ def get_filings(symbol):
     return []
 
 
-def get_historical(symbol, metric, period):
+# 1. Define the Pydantic Model for a Historical Data Point
+class HistoricalQuote(BaseModel):
+    date: str
+    open: float
+    low: float
+    high: float
+    close: float
+    volume: int
+
+    @property
+    def change(self) -> float:
+        return self.close - self.open
+
+    @property
+    def percent_change(self) -> float:
+        return (self.change / self.open) * 100
+    
+    # Optional: If you want to automatically convert the string date to a datetime object
+    @property
+    def datetime_obj(self) -> datetime:
+        return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S" if ":" in self.date else "%Y-%m-%d")
+
+
+def get_historical(symbol, period):
     # Map period to API params
     if period == "Day":
         timeseries = 13  # 6.5 hours * 2 intervals per hour (30min)
@@ -69,12 +93,11 @@ def get_historical(symbol, metric, period):
     else:
         timeseries = 1
         interval = "5min"
-    url = f"{API_BASE}/historical-chart/{interval}/{symbol}"
-    resp = make_authorised_request(url)
+    url = f"{API_BASE}/historical-chart/{interval}"
+    resp = make_authorised_request(url, params={"symbol": symbol, "limit": timeseries})
     if resp.ok and resp.json():
-        data = resp.json()[:timeseries]
-        return [d[metric] for d in data if metric in d], [d["date"] for d in data if metric in d]
-    return [], []
+        return [HistoricalQuote(**quote) for quote in resp.json()[:timeseries]]
+    return []
 
 
 def get_news(symbols, max_articles=10):
@@ -117,13 +140,13 @@ class Event(BaseModel):
     symbol: str
 
 
-def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None) -> list[Event]:
+def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
     """
     Fetch upcoming events (earnings, dividends, splits) for a given stock symbol from FMP API.
     Args:
-        symbol (str): Stock ticker symbol.
-        from_date (str): Start date for events in YYYY-MM-DD format.
-        to_date (str): End date for events in YYYY-MM-DD format.
+        symbols (list): List of stock ticker symbols.
+        from_date (datetime.date, optional): Start date for events.
+        to_date (datetime.date, optional): End date for events.
     Returns:
         list: List of event dictionaries with keys: date, name, type, and symbol.
     """
@@ -167,20 +190,24 @@ def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None)
     return events
 
 
-def get_bulk_quotes(symbols):
-    """
-    Fetch quotes for multiple symbols in a single API call.
-    Returns a dict mapping symbol to quote dict.
-    """
-    if not symbols:
-        return {}
-    url = f"{API_BASE}/batch-quote"
-    params = {"symbols": ','.join(symbols)}
-    resp = make_authorised_request(url, params)
-    if resp.ok:
-        quotes = resp.json()
-        return {q['symbol']: q for q in quotes}
-    return {}
+def get_daily_performance(symbol: str):
+    # Fetching 'Day' gives us the 15min or 30min intervals for today
+    quotes = get_historical(symbol, "Day") 
+    
+    if len(quotes) < 2:
+        return None
+
+    latest_quote = quotes[0]    # Most recent 15 mins
+    opening_quote = quotes[-1]  # The first candle of the session
+    
+    day_change = latest_quote.close - opening_quote.open
+    day_percent = (day_change / opening_quote.open) * 100
+    
+    return {
+        "current": latest_quote.close,
+        "change": day_change,
+        "percent": day_percent
+    }
 
 
 def search_symbol(query):

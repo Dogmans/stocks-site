@@ -1,5 +1,4 @@
 import streamlit as st
-import requests
 import os
 from dotenv import load_dotenv
 
@@ -7,7 +6,8 @@ load_dotenv()
 API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
 API_BASE = "https://financialmodelingprep.com/api/v3"
 
-from fmp_api import get_historical, get_quote, get_profile
+from components.price_widget import price_widget
+from fmp_api import get_historical, get_daily_performance, get_profile
 
 
 def render_detail():
@@ -15,7 +15,7 @@ def render_detail():
     if not symbol:
         st.info("Search for a symbol on the Home page.")
         return
-    quote = get_quote(symbol)
+    performance = get_daily_performance(symbol)
     profile = get_profile(symbol)
     st.header(f"{symbol}")
     if profile:
@@ -54,22 +54,21 @@ def render_detail():
     tabs = st.tabs(["Overview", "Filings", "News"])
 
     with tabs[0]:
-        if quote:
-            from components.price_widget import price_widget
-            price_widget(quote.get("price"), quote.get("changesPercentage"), size='default')
+        if performance:
+            price_widget(performance.get("current"), performance.get("percent"), size='default')
             st.markdown("---")
             st.subheader("Price History")
             period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
-            values, dates = get_historical(symbol, "close", period)
-            if values and dates:
+            historical_data = get_historical(symbol, period)
+            if historical_data:
                 import pandas as pd
                 from datetime import datetime
                 import altair as alt
                 if period in ["Day", "Week"]:
-                    formatted_dates = dates
+                    formatted_dates = [h.date for h in historical_data]
                 else:
-                    formatted_dates = [datetime.strptime(d, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") if len(d) > 10 else d for d in dates]
-                df = pd.DataFrame({"date": formatted_dates, "close": values})
+                    formatted_dates = [datetime.strptime(h.date, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") if len(h.date) > 10 else h.date for h in historical_data]
+                df = pd.DataFrame({"date": formatted_dates, "close": [h.close for h in historical_data]})
                 df = df.set_index("date")
                 start_label = df.index[0]
                 end_label = df.index[-1]

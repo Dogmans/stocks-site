@@ -1,7 +1,7 @@
 from store import PersistentDict
-from components.hyperlink_button import hyperlink_button
+from components.buttons import hyperlink_button
 from config import DB_PATH
-from fmp_api import get_bulk_quotes, search_symbol
+from fmp_api import get_daily_performance, search_symbol
 from queries import handle_query_params
 
 db = PersistentDict(DB_PATH)
@@ -67,7 +67,6 @@ def render_home():
         st.info("No symbols in watchlist.")
     else:
         symbols = list(watchlist.keys())
-        quotes = get_bulk_quotes(symbols)
         # Header row for alignment
         cols = st.columns([2, 4, 2, 2], gap="small")
         with cols[0]:
@@ -90,9 +89,9 @@ def render_home():
                 st.markdown(f"{item.get('name', '')}")
             with cols[2]:
                 from components.price_widget import price_widget
-                quote = quotes.get(symbol)
-                if quote:
-                    price_widget(quote.get('price'), quote.get('changesPercentage'), size='small')
+                performance = get_daily_performance(symbol)
+                if performance:
+                    price_widget(performance["current"], performance["percent"], size='small')
                 else:
                     st.markdown(":-")
             with cols[3]:
