@@ -8,6 +8,39 @@ from config import API_KEY, API_BASE, DISK_CACHE_PATH
 
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
+
+class GainerLoser(BaseModel):
+    symbol: str
+    name: str
+    price: float
+    changesPercentage: float
+    exchange: str
+
+
+def get_gainers():
+    """
+    Fetch biggest stock gainers from FMP API.
+    Returns a list of GainerLoser models.
+    """
+    url = "https://financialmodelingprep.com/stable/biggest-gainers"
+    resp = make_authorised_request(url)
+    if resp.ok and resp.json():
+        return [GainerLoser(**item) for item in resp.json()]
+    return []
+
+
+def get_losers():
+    """
+    Fetch biggest stock losers from FMP API.
+    Returns a list of GainerLoser models.
+    """
+    url = "https://financialmodelingprep.com/stable/biggest-losers"
+    resp = make_authorised_request(url)
+    if resp.ok and resp.json():
+        return [GainerLoser(**item) for item in resp.json()]
+    return []
+
+
 def make_authorised_request(url, params=None):
     """
     Helper to make a GET request with API key injected into params.
