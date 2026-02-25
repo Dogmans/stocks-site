@@ -19,7 +19,7 @@ def render_line(cols, gainerLoser: GainerLoser):
     with cols[2]:
         st.markdown(f"${gainerLoser.price}")
     with cols[3]:
-        st.markdown(f"{gainerLoser.changesPercentage}%")
+        st.markdown(f"{gainerLoser.changesPercentage:.2f}%")
     with cols[4]:
          st.markdown(gainerLoser.exchange)
 
