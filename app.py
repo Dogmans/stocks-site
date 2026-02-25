@@ -5,6 +5,10 @@ from pages.home import render_home
 from pages.markets import render_markets
 from pages.detail import render_detail
 from queries import handle_query_params
+import logging
+
+# Set up logging
+logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 
 st.set_page_config(page_title="Stock & ETF Visualizer", layout="wide")
 

@@ -7,8 +7,6 @@ db = PersistentDict(DB_PATH)
 import streamlit as st
 import logging
 
-# Set up logging
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s %(levelname)s %(message)s')
 logger = logging.getLogger(__name__)
 
 # Home page

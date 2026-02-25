@@ -1,10 +1,14 @@
 import diskcache
-
 import datetime
+import logging
 import requests
 
+from dateutil import parser
 from pydantic import BaseModel
+from gliner import GLiNER
 from config import API_KEY, API_BASE, DISK_CACHE_PATH
+
+logger = logging.getLogger(__name__)
 
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
@@ -67,8 +71,10 @@ def make_authorised_request(url, params=None):
         try:
             data = resp.json()
             cache.set(key, data, expire=900)  # 15 minutes
-        except Exception:
-            pass
+        except Exception as e:
+            logger.error(f"Error caching response for {url}: {e}")
+    else:
+        logger.error(f"Request to {url} failed with status {resp.status_code}: {resp.text}")
     return resp
 
 
@@ -215,6 +221,7 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
             "name": "Stock Split"
         },
     ]
+
     params = {}
     if from_date:
         params["from"] = from_date.isoformat() if isinstance(from_date, datetime.date) else from_date
@@ -230,7 +237,40 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
                     type=src["type"],
                     symbol=item["symbol"]
                 ))
-    
+
+    # Treat press releases differently since we have to filter text to determine if it's a relevant event
+    resp = make_authorised_request(f"{API_BASE}/news/press-releases-latest", params)
+    if resp.ok and resp.json():
+        model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+        labels = ["Financial Conference", "Tech Expo", "Date", "Company"]
+        for item in resp.json():
+            title = item.get("title", "")
+            text = item.get("text", "")
+            combined_text = f"{title} {text}"
+            entities = model.predict_entities(combined_text, labels, threshold=0.5)
+            clean_date = None
+            event_found = False
+            org_found = False
+            event_name = "Press Release"
+            for ent in entities:
+                if ent['label'] == "Financial Conference" or ent['label'] == "Tech Expo":
+                    event_name = ent['text']
+                    event_found = True
+                elif ent['label'] == "Company":
+                    org_found = True
+                elif ent['label'] == "Date":
+                    try:
+                        clean_date = parser.parse(ent['text']).date().isoformat()
+                    except Exception:
+                        pass
+                if clean_date and event_found and org_found:
+                    events.append(Event(
+                    date=clean_date,
+                    name=event_name,
+                    type="event",
+                    symbol=item["symbol"]
+                ))
+                    break
     if len(symbols):
         events = [e for e in events if e.symbol in symbols]
 
