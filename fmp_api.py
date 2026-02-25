@@ -161,16 +161,14 @@ def get_news(symbols, max_articles=10):
         all_articles = []
         seen_urls = set()
         url = f"{API_BASE}/news/stock"
-        params = {"symbols": symbols, "limit": max_articles}
-        if resp:= make_authorised_request(url, params):
-            articles = resp
-        else:
-            articles = []
-        for article in articles:
-            url_key = article.get("url")
-            if url_key and url_key not in seen_urls:
-                all_articles.append(article)
-                seen_urls.add(url_key)
+        for symbol in symbols:
+            params = {"symbols": [symbol], "limit": max_articles}
+            if resp := make_authorised_request(url, params):
+                for article in resp:
+                    url_key = article.get("url")
+                    if url_key and url_key not in seen_urls:
+                        all_articles.append(article)
+                        seen_urls.add(url_key)
         news = all_articles
     return news
 
