@@ -82,14 +82,14 @@ def get_historical(symbol, period):
         timeseries = 65  # 5 trading days * 13 hours * 1 interval per 30min
         interval = "30min"
     elif period == "Month":
-        timeseries = 22  # 22 trading days
-        interval = "1day"
+        timeseries = 132  # 22 trading days
+        interval = "4hour"
     elif period == "Year":
-        timeseries = 252
-        interval = "1day"
+        timeseries = 1584
+        interval = "4hour"
     elif period == "5 Year":
-        timeseries = 1260
-        interval = "1day"
+        timeseries = 7920
+        interval = "4hour"
     else:
         timeseries = 1
         interval = "5min"
