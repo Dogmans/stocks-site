@@ -1,9 +1,9 @@
 from store import PersistentDict
 from components.hyperlink_button import hyperlink_button
+from config import DB_PATH
 from fmp_api import get_bulk_quotes, search_symbol
 from queries import handle_query_params
 
-DB_PATH = 'stocks_site_db'
 db = PersistentDict(DB_PATH)
 import streamlit as st
 import logging

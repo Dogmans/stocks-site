@@ -1,4 +1,5 @@
 import streamlit as st
+from pages.calendar import render_calendar
 from pages.home import render_home
 from pages.markets import render_markets
 from pages.detail import render_detail
@@ -6,6 +7,7 @@ st.set_page_config(page_title="Stock & ETF Visualizer", layout="wide")
 
 PAGES = {
     "Home": render_home,
+    "Calendar": render_calendar,
     "Markets Overview": render_markets,
     "Stock/ETF Detail": render_detail
 }

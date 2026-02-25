@@ -1,3 +1,5 @@
+from pydantic import BaseModel
+
 def get_filings(symbol):
     """
     Fetch SEC filings for a given symbol from FMP API.
@@ -10,20 +12,17 @@ def get_filings(symbol):
     import os
     load_dotenv()
     API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-    API_BASE = "https://financialmodelingprep.com/api/v3"
-    url = f"{API_BASE}/sec_filings/{symbol}"
-    params = {"apikey": API_KEY}
+    API_BASE = "https://financialmodelingprep.com/stable"
+    url = f"{API_BASE}/sec-filings-search/symbol"
+    params = {"symbol": symbol, "apikey": API_KEY}
     resp = requests.get(url, params=params)
     if resp.ok and resp.json():
         return resp.json()
     return []
-from dotenv import load_dotenv
-import requests
-import os
+from datetime import date
 
-load_dotenv()
-API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-API_BASE = "https://financialmodelingprep.com/api/v3"
+import requests
+from config import API_KEY, API_BASE
 
 def get_news(symbols, max_articles=10):
     """
@@ -37,16 +36,16 @@ def get_news(symbols, max_articles=10):
     news = []
     if len(symbols) == 1:
         tickers = symbols[0]
-        url = f"{API_BASE}/stock_news"
-        params = {"tickers": tickers, "limit": max_articles, "apikey": API_KEY}
+        url = f"{API_BASE}/news/stock"
+        params = {"symbols": tickers, "limit": max_articles, "apikey": API_KEY}
         resp = requests.get(url, params=params)
         news = resp.json() if resp.ok and resp.json() else []
     else:
         all_articles = []
         seen_urls = set()
         for symbol in symbols:
-            url = f"{API_BASE}/stock_news"
-            params = {"tickers": symbol, "limit": max_articles, "apikey": API_KEY}
+            url = f"{API_BASE}/news/stock"
+            params = {"symbols": symbol, "limit": max_articles, "apikey": API_KEY}
             resp = requests.get(url, params=params)
             articles = resp.json() if resp.ok and resp.json() else []
             for article in articles:
@@ -57,9 +56,60 @@ def get_news(symbols, max_articles=10):
         news = all_articles
     return news
 
-import requests
-import os
-from dotenv import load_dotenv
+class Event(BaseModel):
+    date: str
+    name: str
+    type: str
+    symbol: str
+
+def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None) -> list[Event]:
+    """
+    Fetch upcoming events (earnings, dividends, splits) for a given stock symbol from FMP API.
+    Args:
+        symbol (str): Stock ticker symbol.
+        from_date (str): Start date for events in YYYY-MM-DD format.
+        to_date (str): End date for events in YYYY-MM-DD format.
+    Returns:
+        list: List of event dictionaries with keys: date, name, type, and symbol.
+    """
+    events = []
+    event_sources = [
+        {
+            "url": f"{API_BASE}/earnings-calendar",
+            "type": "earnings",
+            "name": "Earnings Report"
+        },
+        {
+            "url": f"{API_BASE}/dividends-calendar",
+            "type": "dividend",
+            "name": "Dividend"
+        },
+        {
+            "url": f"{API_BASE}/splits-calendar",
+            "type": "split",
+            "name": "Stock Split"
+        },
+    ]
+    params={"apikey": API_KEY}
+    if from_date:
+        params["from"] = from_date.isoformat() if isinstance(from_date, date) else from_date
+    if to_date:
+        params["to"] = to_date.isoformat() if isinstance(to_date, date) else to_date
+    for src in event_sources:
+        resp = requests.get(src["url"], params=params)
+        if resp.ok and resp.json():
+            for item in resp.json():
+                events.append(Event(
+                    date=item.get("date", item.get("paymentDate")),
+                    name=src["name"],
+                    type=src["type"],
+                    symbol=item["symbol"]
+                ))
+    
+    if len(symbols):
+        events = [e for e in events if e.symbol in symbols]
+
+    return events
 
 def get_bulk_quotes(symbols):
     """
@@ -68,8 +118,8 @@ def get_bulk_quotes(symbols):
     """
     if not symbols:
         return {}
-    url = f"{API_BASE}/quote/{','.join(symbols)}"
-    params = {"apikey": API_KEY}
+    url = f"{API_BASE}/batch-quote"
+    params = {"symbols": ','.join(symbols), "apikey": API_KEY}
     resp = requests.get(url, params=params)
     if resp.ok:
         quotes = resp.json()
@@ -77,7 +127,7 @@ def get_bulk_quotes(symbols):
     return {}
 
 def search_symbol(query):
-    url = f"{API_BASE}/search"
+    url = f"{API_BASE}/search-symbol"
     params = {"query": query, "apikey": API_KEY, "limit": 10}
     resp = requests.get(url, params=params)
     if resp.ok:

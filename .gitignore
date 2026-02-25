@@ -13,3 +13,5 @@ __pycache__/
 
 stocks_site_db
 .pytest_cache/
+watchlist
+TODO.txt
