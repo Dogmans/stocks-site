@@ -5,8 +5,7 @@ from store import PersistentDict
 
 def hyperlink_button(label, symbol, page="Stock/ETF Detail"):
     """
-    Renders a true hyperlink that, when clicked, sets session state for navigation.
-    Returns True if this link was just clicked (i.e., query param matches), else False.
+    Renders a hyperlink-style button in Streamlit that navigates to a detail page for the given stock symbol when clicked.
     """
     import urllib.parse
     # Encode the symbol and page for the URL

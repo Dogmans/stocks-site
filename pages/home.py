@@ -66,6 +66,7 @@ def render_home():
     if not watchlist:
         st.info("No symbols in watchlist.")
     else:
+        page = "Stock/ETF Detail"
         symbols = list(watchlist.keys())
         # Header row for alignment
         cols = st.columns([2, 4, 2, 2], gap="small")
@@ -81,10 +82,10 @@ def render_home():
             cols = st.columns([2, 4, 2, 2], gap="small")
             with cols[0]:
                 symbol_clicked = hyperlink_button(symbol, symbol)
-                if symbol_clicked:
-                    st.session_state["detail_symbol"] = symbol
-                    st.session_state["page"] = "Stock/ETF Detail"
-                    st.rerun()
+                # if symbol_clicked:
+                #     st.session_state["detail_symbol"] = symbol
+                #     st.session_state["page"] = page
+                #     st.rerun()
             with cols[1]:
                 st.markdown(f"{item.get('name', '')}")
             with cols[2]:
