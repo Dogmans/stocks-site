@@ -1,13 +1,8 @@
 import streamlit as st
-import os
-from dotenv import load_dotenv
 
-load_dotenv()
-API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-API_BASE = "https://financialmodelingprep.com/api/v3"
-
+from components.buttons import watchlist_button
 from components.price_widget import price_widget
-from fmp_api import get_historical, get_daily_performance, get_profile
+from fmp_api import get_historical, get_performance, get_profile
 
 
 def render_detail():
@@ -15,7 +10,6 @@ def render_detail():
     if not symbol:
         st.info("Search for a symbol on the Home page.")
         return
-    performance = get_daily_performance(symbol)
     profile = get_profile(symbol)
     st.header(f"{symbol}")
     if profile:
@@ -54,56 +48,36 @@ def render_detail():
     tabs = st.tabs(["Overview", "Filings", "News"])
 
     with tabs[0]:
-        if performance:
-            price_widget(performance.get("current"), performance.get("percent"), size='default')
+        period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
+        historical_data = get_historical(symbol, period)
+        if historical_data:
             st.markdown("---")
             st.subheader("Price History")
-            period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
-            historical_data = get_historical(symbol, period)
-            if historical_data:
-                import pandas as pd
-                from datetime import datetime
-                import altair as alt
-                if period in ["Day", "Week"]:
-                    formatted_dates = [h.date for h in historical_data]
-                else:
-                    formatted_dates = [datetime.strptime(h.date, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") if len(h.date) > 10 else h.date for h in historical_data]
-                df = pd.DataFrame({"date": formatted_dates, "close": [h.close for h in historical_data]})
-                df = df.set_index("date")
-                start_label = df.index[0]
-                end_label = df.index[-1]
-                chart = alt.Chart(df.reset_index()).mark_line().encode(
-                    x=alt.X('date', axis=alt.Axis(labels=False, ticks=False)),
-                    y=alt.Y('close', scale=alt.Scale(domain=[df['close'].min(), df['close'].max()]))
-                ).properties(width='container', height=300)
-                st.altair_chart(chart, use_container_width=True)
-                st.caption(f"{start_label} ... {end_label}")
-            else:
-                st.info("No historical data available for close price.")
-
-            st.subheader("All Metrics")
-            def format_metric(val):
-                try:
-                    num = float(val)
-                    abs_num = abs(num)
-                    if abs_num >= 1e9:
-                        return f"{num/1e9:.5g} bn"
-                    elif abs_num >= 1e6:
-                        return f"{num/1e6:.5g} m"
-                    elif abs_num >= 1e3:
-                        return f"{num/1e3:.5g} k"
-                    else:
-                        return f"{num:.5g}"
-                except (ValueError, TypeError):
-                    return val
-
-            metrics = [(k, format_metric(v)) for k, v in quote.items() if k != "price"]
+            performance = get_performance(historical_data)
+            if performance:
+                price_widget(performance.get("current"), performance.get("percent"), size='default')
             import pandas as pd
-            df_metrics = pd.DataFrame(metrics, columns=["Metric", "Value"])
-            st.table(df_metrics.style.hide(axis="index"))
+            from datetime import datetime
+            import altair as alt
+            if period in ["Day", "Week"]:
+                formatted_dates = [h.date for h in historical_data]
+            else:
+                formatted_dates = [datetime.strptime(h.date, "%Y-%m-%d %H:%M:%S").strftime("%Y-%m-%d") if len(h.date) > 10 else h.date for h in historical_data]
+            df = pd.DataFrame({"date": formatted_dates, "close": [h.close for h in historical_data]})
+            df = df.set_index("date")
+            start_label = df.index[0]
+            end_label = df.index[-1]
+            chart = alt.Chart(df.reset_index()).mark_line().encode(
+                x=alt.X('date', axis=alt.Axis(labels=False, ticks=False)),
+                y=alt.Y('close', scale=alt.Scale(domain=[df['close'].min(), df['close'].max()]))
+            ).properties(width='container', height=300)
+            st.altair_chart(chart, use_container_width=True)
+            st.caption(f"{start_label} ... {end_label}")
+        else:
+            st.info("No historical data available for close price.")
+
         st.markdown("---")
-        from components.watchlist_button import watchlist_button
-        watchlist_button(symbol, quote)
+        watchlist_button(symbol)
 
     # Filings Tab
     with tabs[1]:

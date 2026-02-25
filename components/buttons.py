@@ -15,7 +15,7 @@ def hyperlink_button(label, symbol, page="Stock/ETF Detail"):
     return False
 
 
-def watchlist_button(symbol, item=None):
+def watchlist_button(symbol):
     db = PersistentDict(config.DB_PATH)
     watchlist = db.get('watchlist', {})
     in_watchlist = symbol in watchlist
@@ -24,8 +24,6 @@ def watchlist_button(symbol, item=None):
         st.button(btn_label, key=f"add_{symbol}", disabled=True, help="Already in watchlist")
     else:
         if st.button(btn_label, key=f"add_{symbol}"):
-            if item is None:
-                item = {"symbol": symbol}
-            watchlist[symbol] = item
+            watchlist[symbol] = {"symbol": symbol}
             db['watchlist'] = watchlist
             st.success(f"Added {symbol} to watchlist.")

@@ -193,7 +193,10 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
 def get_daily_performance(symbol: str):
     # Fetching 'Day' gives us the 15min or 30min intervals for today
     quotes = get_historical(symbol, "Day") 
+    return get_performance(quotes)
     
+
+def get_performance(quotes):
     if len(quotes) < 2:
         return None
 
