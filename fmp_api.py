@@ -1,10 +1,12 @@
+import diskcache
 
 import datetime
 import requests
 
 from pydantic import BaseModel
-from config import API_KEY, API_BASE
+from config import API_KEY, API_BASE, DISK_CACHE_PATH
 
+cache = diskcache.Cache(DISK_CACHE_PATH)
 
 def make_authorised_request(url, params=None):
     """
@@ -15,7 +17,26 @@ def make_authorised_request(url, params=None):
         params = {}
     params = dict(params)  # copy to avoid mutating caller
     params["apikey"] = API_KEY
-    return requests.get(url, params=params)
+    # Create a cache key from url and sorted params
+    key = f"{url}|{sorted(params.items())}"
+    cached = cache.get(key)
+    if cached:
+        # Return a Response-like object
+        class CachedResponse:
+            def __init__(self, data):
+                self._data = data
+                self.ok = True
+            def json(self):
+                return self._data
+        return CachedResponse(cached)
+    resp = requests.get(url, params=params)
+    if resp.ok:
+        try:
+            data = resp.json()
+            cache.set(key, data, expire=900)  # 15 minutes
+        except Exception:
+            pass
+    return resp
 
 
 def get_quote(symbol):
@@ -170,9 +191,9 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
     ]
     params = {}
     if from_date:
-        params["from"] = from_date.isoformat() if isinstance(from_date, date) else from_date
+        params["from"] = from_date.isoformat() if isinstance(from_date, datetime.date) else from_date
     if to_date:
-        params["to"] = to_date.isoformat() if isinstance(to_date, date) else to_date
+        params["to"] = to_date.isoformat() if isinstance(to_date, datetime.date) else to_date
     for src in event_sources:
         resp = make_authorised_request(src["url"], params)
         if resp.ok and resp.json():
