@@ -72,17 +72,10 @@ def make_authorised_request(url, params=None):
     return resp
 
 
-def get_quote(symbol):
-    url = f"{API_BASE}/quote/{symbol}"
-    resp = make_authorised_request(url)
-    if resp.ok and resp.json():
-        return resp.json()[0]
-    return None
-
-
 def get_profile(symbol):
-    url = f"{API_BASE}/profile/{symbol}"
-    resp = make_authorised_request(url)
+    url = f"{API_BASE}/profile"
+    params = {"symbol": symbol}
+    resp = make_authorised_request(url, params)
     if resp.ok and resp.json():
         return resp.json()[0]
     return None
