@@ -12,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
+model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+
 
 class GainerLoser(BaseModel):
     symbol: str
@@ -54,16 +56,8 @@ def make_authorised_request(url, params=None):
     params["apikey"] = API_KEY
     # Create a cache key from url and sorted params
     key = f"{url}|{sorted(params.items())}"
-    cached = cache.get(key)
-    if cached:
-        # Return a Response-like object
-        class CachedResponse:
-            def __init__(self, data):
-                self._data = data
-                self.ok = True
-            def json(self):
-                return self._data
-        return CachedResponse(cached)
+    if cached := cache.get(key):
+        return cached
     resp = requests.get(url, params=params)
     if resp.ok:
         try:
@@ -143,7 +137,7 @@ def get_historical(symbol, period):
         timeseries = 1
         interval = "5min"
     url = f"{API_BASE}/historical-chart/{interval}"
-    if resp:= make_authorised_request(url, params={"symbol": symbol, "limit": timeseries}):
+    if resp := make_authorised_request(url, params={"symbol": symbol, "limit": timeseries}):
         return [HistoricalQuote(**quote) for quote in resp[:timeseries]]
     return []
 
@@ -159,26 +153,24 @@ def get_news(symbols, max_articles=10):
         return []
     news = []
     if len(symbols) == 1:
-        tickers = symbols[0]
         url = f"{API_BASE}/news/stock"
-        params = {"symbols": tickers, "limit": max_articles}
+        params = {"symbols": symbols[0], "limit": max_articles}
         if resp:= make_authorised_request(url, params):
             news = resp
     else:
         all_articles = []
         seen_urls = set()
-        for symbol in symbols:
-            url = f"{API_BASE}/news/stock"
-            params = {"symbols": symbol, "limit": max_articles}
-            if resp:= make_authorised_request(url, params):
-                articles = resp
-            else:
-                articles = []
-            for article in articles:
-                url_key = article.get("url")
-                if url_key and url_key not in seen_urls:
-                    all_articles.append(article)
-                    seen_urls.add(url_key)
+        url = f"{API_BASE}/news/stock"
+        params = {"symbols": symbols, "limit": max_articles}
+        if resp:= make_authorised_request(url, params):
+            articles = resp
+        else:
+            articles = []
+        for article in articles:
+            url_key = article.get("url")
+            if url_key and url_key not in seen_urls:
+                all_articles.append(article)
+                seen_urls.add(url_key)
         news = all_articles
     return news
 
@@ -190,7 +182,7 @@ class Event(BaseModel):
     symbol: str
 
 
-def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
+def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
     """
     Fetch upcoming events (earnings, dividends, splits) for a given stock symbol from FMP API.
     Args:
@@ -235,10 +227,9 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
                     symbol=item["symbol"]
                 ))
 
-    # Treat press releases differently since we have to filter text to determine if it's a relevant event
-    resp = make_authorised_request(f"{API_BASE}/news/press-releases-latest", params)
+    # Treat news differently since we have to filter text to determine if it's a relevant event
+    resp = get_news(symbols.keys(), max_articles=100)  # Get more news to increase chances of finding events
     if resp:
-        model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
         labels = ["Financial Conference", "Tech Expo", "Date", "Company"]
         for item in resp:
             title = item.get("title", "")
@@ -268,8 +259,9 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
                     symbol=item["symbol"]
                 ))
                     break
-    if len(symbols):
-        events = [e for e in events if e.symbol in symbols]
+
+    # Filter to only include events for our symbols
+    events = [e for e in events if e.symbol in symbols]
 
     return events
 
