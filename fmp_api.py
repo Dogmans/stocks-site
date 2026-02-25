@@ -27,9 +27,8 @@ def get_gainers():
     Returns a list of GainerLoser models.
     """
     url = "https://financialmodelingprep.com/stable/biggest-gainers"
-    resp = make_authorised_request(url)
-    if resp.ok and resp.json():
-        return [GainerLoser(**item) for item in resp.json()]
+    if resp := make_authorised_request(url):
+        return [GainerLoser(**item) for item in resp]
     return []
 
 
@@ -39,9 +38,8 @@ def get_losers():
     Returns a list of GainerLoser models.
     """
     url = "https://financialmodelingprep.com/stable/biggest-losers"
-    resp = make_authorised_request(url)
-    if resp.ok and resp.json():
-        return [GainerLoser(**item) for item in resp.json()]
+    if resp := make_authorised_request(url):
+        return [GainerLoser(**item) for item in resp]
     return []
 
 
@@ -71,19 +69,18 @@ def make_authorised_request(url, params=None):
         try:
             data = resp.json()
             cache.set(key, data, expire=900)  # 15 minutes
+            return data
         except Exception as e:
             logger.error(f"Error caching response for {url}: {e}")
     else:
         logger.error(f"Request to {url} failed with status {resp.status_code}: {resp.text}")
-    return resp
-
+    return None
 
 def get_profile(symbol):
     url = f"{API_BASE}/profile"
     params = {"symbol": symbol}
-    resp = make_authorised_request(url, params)
-    if resp.ok and resp.json():
-        return resp.json()[0]
+    if resp := make_authorised_request(url, params):
+        return resp[0]
     return None
 
 
@@ -97,9 +94,8 @@ def get_filings(symbol):
     """
     url = f"{API_BASE}/sec-filings-search/symbol"
     params = {"symbol": symbol}
-    resp = make_authorised_request(url, params)
-    if resp.ok and resp.json():
-        return resp.json()
+    if resp := make_authorised_request(url, params):
+        return resp
     return []
 
 
@@ -147,9 +143,8 @@ def get_historical(symbol, period):
         timeseries = 1
         interval = "5min"
     url = f"{API_BASE}/historical-chart/{interval}"
-    resp = make_authorised_request(url, params={"symbol": symbol, "limit": timeseries})
-    if resp.ok and resp.json():
-        return [HistoricalQuote(**quote) for quote in resp.json()[:timeseries]]
+    if resp:= make_authorised_request(url, params={"symbol": symbol, "limit": timeseries}):
+        return [HistoricalQuote(**quote) for quote in resp[:timeseries]]
     return []
 
 
@@ -167,16 +162,18 @@ def get_news(symbols, max_articles=10):
         tickers = symbols[0]
         url = f"{API_BASE}/news/stock"
         params = {"symbols": tickers, "limit": max_articles}
-        resp = make_authorised_request(url, params)
-        news = resp.json() if resp.ok and resp.json() else []
+        if resp:= make_authorised_request(url, params):
+            news = resp
     else:
         all_articles = []
         seen_urls = set()
         for symbol in symbols:
             url = f"{API_BASE}/news/stock"
             params = {"symbols": symbol, "limit": max_articles}
-            resp = make_authorised_request(url, params)
-            articles = resp.json() if resp.ok and resp.json() else []
+            if resp:= make_authorised_request(url, params):
+                articles = resp
+            else:
+                articles = []
             for article in articles:
                 url_key = article.get("url")
                 if url_key and url_key not in seen_urls:
@@ -229,8 +226,8 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
         params["to"] = to_date.isoformat() if isinstance(to_date, datetime.date) else to_date
     for src in event_sources:
         resp = make_authorised_request(src["url"], params)
-        if resp.ok and resp.json():
-            for item in resp.json():
+        if resp:
+            for item in resp:
                 events.append(Event(
                     date=item.get("date", item.get("paymentDate")),
                     name=src["name"],
@@ -240,10 +237,10 @@ def get_events_for_symbols(symbols=[], from_date: datetime.date=None, to_date: d
 
     # Treat press releases differently since we have to filter text to determine if it's a relevant event
     resp = make_authorised_request(f"{API_BASE}/news/press-releases-latest", params)
-    if resp.ok and resp.json():
+    if resp:
         model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
         labels = ["Financial Conference", "Tech Expo", "Date", "Company"]
-        for item in resp.json():
+        for item in resp:
             title = item.get("title", "")
             text = item.get("text", "")
             combined_text = f"{title} {text}"
@@ -303,7 +300,6 @@ def get_performance(quotes):
 def search_symbol(query):
     url = f"{API_BASE}/search-symbol"
     params = {"query": query, "limit": 10}
-    resp = make_authorised_request(url, params)
-    if resp.ok:
-        return resp.json()
+    if resp := make_authorised_request(url, params):
+        return resp
     return []
