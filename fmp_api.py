@@ -1,4 +1,27 @@
+from datetime import date
+import requests
+
 from pydantic import BaseModel
+from config import API_KEY, API_BASE
+
+
+def get_quote(symbol):
+    url = f"{API_BASE}/quote/{symbol}"
+    params = {"apikey": API_KEY}
+    resp = requests.get(url, params=params)
+    if resp.ok and resp.json():
+        return resp.json()[0]
+    return None
+
+
+def get_profile(symbol):
+    url = f"{API_BASE}/profile/{symbol}"
+    params = {"apikey": API_KEY}
+    resp = requests.get(url, params=params)
+    if resp.ok and resp.json():
+        return resp.json()[0]
+    return None
+
 
 def get_filings(symbol):
     """
@@ -8,21 +31,42 @@ def get_filings(symbol):
     Returns:
         list: List of filings dictionaries.
     """
-    from dotenv import load_dotenv
-    import os
-    load_dotenv()
-    API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
-    API_BASE = "https://financialmodelingprep.com/stable"
     url = f"{API_BASE}/sec-filings-search/symbol"
     params = {"symbol": symbol, "apikey": API_KEY}
     resp = requests.get(url, params=params)
     if resp.ok and resp.json():
         return resp.json()
     return []
-from datetime import date
 
-import requests
-from config import API_KEY, API_BASE
+
+def get_historical(symbol, metric, period):
+    # Map period to API params
+    if period == "Day":
+        timeseries = 13  # 6.5 hours * 2 intervals per hour (30min)
+        interval = "30min"
+    elif period == "Week":
+        timeseries = 65  # 5 trading days * 13 hours * 1 interval per 30min
+        interval = "30min"
+    elif period == "Month":
+        timeseries = 22  # 22 trading days
+        interval = "1day"
+    elif period == "Year":
+        timeseries = 252
+        interval = "1day"
+    elif period == "5 Year":
+        timeseries = 1260
+        interval = "1day"
+    else:
+        timeseries = 1
+        interval = "5min"
+    url = f"{API_BASE}/historical-chart/{interval}/{symbol}"
+    params = {"apikey": API_KEY}
+    resp = requests.get(url, params=params)
+    if resp.ok and resp.json():
+        data = resp.json()[:timeseries]
+        return [d[metric] for d in data if metric in d], [d["date"] for d in data if metric in d]
+    return [], []
+
 
 def get_news(symbols, max_articles=10):
     """
@@ -56,11 +100,13 @@ def get_news(symbols, max_articles=10):
         news = all_articles
     return news
 
+
 class Event(BaseModel):
     date: str
     name: str
     type: str
     symbol: str
+
 
 def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None) -> list[Event]:
     """
@@ -111,6 +157,7 @@ def get_events_for_symbols(symbols=[], from_date: date=None, to_date: date=None)
 
     return events
 
+
 def get_bulk_quotes(symbols):
     """
     Fetch quotes for multiple symbols in a single API call.
@@ -125,6 +172,7 @@ def get_bulk_quotes(symbols):
         quotes = resp.json()
         return {q['symbol']: q for q in quotes}
     return {}
+
 
 def search_symbol(query):
     url = f"{API_BASE}/search-symbol"

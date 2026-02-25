@@ -7,23 +7,8 @@ load_dotenv()
 API_KEY = os.getenv("FINANCIAL_MODELING_PREP_API_KEY")
 API_BASE = "https://financialmodelingprep.com/api/v3"
 
-# Helper functions
+from fmp_api import get_historical, get_quote, get_profile
 
-def get_quote(symbol):
-    url = f"{API_BASE}/quote/{symbol}"
-    params = {"apikey": API_KEY}
-    resp = requests.get(url, params=params)
-    if resp.ok and resp.json():
-        return resp.json()[0]
-    return None
-
-def get_profile(symbol):
-    url = f"{API_BASE}/profile/{symbol}"
-    params = {"apikey": API_KEY}
-    resp = requests.get(url, params=params)
-    if resp.ok and resp.json():
-        return resp.json()[0]
-    return None
 
 def render_detail():
     symbol = st.session_state.get("detail_symbol")
@@ -75,7 +60,6 @@ def render_detail():
             st.markdown("---")
             st.subheader("Price History")
             period = st.selectbox("Time period", ["Day", "Week", "Month", "Year", "5 Year"], index=0)
-            from pages.historical_utils import get_historical
             values, dates = get_historical(symbol, "close", period)
             if values and dates:
                 import pandas as pd
