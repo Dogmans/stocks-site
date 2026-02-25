@@ -2,7 +2,6 @@ from store import PersistentDict
 from components.buttons import hyperlink_button
 from config import DB_PATH
 from fmp_api import get_daily_performance, search_symbol
-from queries import handle_query_params
 
 db = PersistentDict(DB_PATH)
 import streamlit as st
@@ -15,10 +14,8 @@ logger = logging.getLogger(__name__)
 # Home page
 def render_home():
     logger.debug("render_home called")
-    handle_query_params()  # Sync query params to session state on page load
     st.title("Stock & ETF Visualizer")
     st.write("Quickly view stocks, ETFs, and indices with live data from Financial Modeling Prep.")
-
     query = st.text_input("Search for a stock, ETF, or index:")
     logger.debug(f"User query: {query}")
     results = []
