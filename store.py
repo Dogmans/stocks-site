@@ -1,8 +1,10 @@
 import shelve
 
+from config import DB_PATH
+
 class PersistentDict:
-    def __init__(self, filename):
-        self.filename = filename
+    def __init__(self, name):
+        self.filename = name
 
     def __getitem__(self, key):
         with shelve.open(self.filename, writeback=True) as db:

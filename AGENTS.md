@@ -20,6 +20,7 @@ A Streamlit web app for searching, visualizing, and tracking stocks, ETFs, and i
 - `app.py` — Streamlit entry point
 - `components/` — UI widgets (e.g., price_widget, news_feed)
 - `pages/` — Streamlit multipage app pages
+	- `calendar.py` — Calendar page for stock-related events
 - `fmp_api.py` — All Financial Modeling Prep API logic (quotes, search, news, filings, etc.)
 - `store.py` — PersistentDict for watchlist/session
 - `requirements.txt` — Python dependencies
@@ -33,6 +34,7 @@ A Streamlit web app for searching, visualizing, and tracking stocks, ETFs, and i
 | News feed      | components/news_feed.py | Renders news, uses fmp_api.get_news    |
 | Price widget   | components/price_widget.py | Price display widget                |
 | Home page      | pages/home.py      | Main UI, search, watchlist, navigation  |
+| Calendar page  | pages/calendar.py  | Displays stock-related events for watchlist |
 
 ## Code Style
 - Black/isort for formatting and import order
