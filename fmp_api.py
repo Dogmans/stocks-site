@@ -1,3 +1,5 @@
+import streamlit as st
+
 import diskcache
 import datetime
 import logging
@@ -116,6 +118,17 @@ class HistoricalQuote(BaseModel):
         return datetime.strptime(self.date, "%Y-%m-%d %H:%M:%S" if ":" in self.date else "%Y-%m-%d")
 
 
+def parse_historical_quote(quote: dict) -> HistoricalQuote:
+    return HistoricalQuote(
+        date=quote.get("date"),
+        open=float(quote.get("open", 0)),
+        low=float(quote.get("low", 0)),
+        high=float(quote.get("high", 0)),
+        close=float(quote.get("close", 0)),
+        volume=int(float(quote.get("volume", 0)))
+    )
+
+
 def get_historical(symbol, period):
     # Map period to API params
     if period == "Day":
@@ -138,7 +151,7 @@ def get_historical(symbol, period):
         interval = "5min"
     url = f"{API_BASE}/historical-chart/{interval}"
     if resp := make_authorised_request(url, params={"symbol": symbol, "limit": timeseries}):
-        return [HistoricalQuote(**quote) for quote in resp[:timeseries]]
+        return [parse_historical_quote(q) for q in resp[:timeseries]]
     return []
 
 
@@ -178,8 +191,10 @@ class Event(BaseModel):
     name: str
     type: str
     symbol: str
+    url: str
 
 
+@st.cache_data
 def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
     """
     Fetch upcoming events (earnings, dividends, splits) for a given stock symbol from FMP API.
@@ -222,13 +237,14 @@ def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: date
                     date=item.get("date", item.get("paymentDate")),
                     name=src["name"],
                     type=src["type"],
-                    symbol=item["symbol"]
+                    symbol=item["symbol"],
+                    url=item.get("url", "")
                 ))
 
     # Treat news differently since we have to filter text to determine if it's a relevant event
     resp = get_news(symbols.keys(), max_articles=100)  # Get more news to increase chances of finding events
     if resp:
-        labels = ["Financial Conference", "Tech Expo", "Date", "Company"]
+        labels = ["Financial Conference", "Tech Expo", "Date", "Company", "Announcement"]
         for item in resp:
             title = item.get("title", "")
             text = item.get("text", "")
@@ -251,11 +267,12 @@ def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: date
                         pass
                 if clean_date and event_found and org_found:
                     events.append(Event(
-                    date=clean_date,
-                    name=event_name,
-                    type="event",
-                    symbol=item["symbol"]
-                ))
+                        date=clean_date,
+                        name=event_name,
+                        type="event",
+                        symbol=item["symbol"],
+                        url=item["url"]
+                    ))
                     break
 
     # Filter to only include events for our symbols

@@ -61,7 +61,6 @@ def render_home():
     if not watchlist:
         st.info("No symbols in watchlist.")
     else:
-        page = "Stock/ETF Detail"
         symbols = list(watchlist.keys())
         # Header row for alignment
         cols = st.columns([2, 4, 2, 2], gap="small")
