@@ -43,8 +43,8 @@ def render_calendar():
     # We fetch specifically for the visible week to keep it snappy
     events: list[Event] = get_events_for_symbols(
         watchlist, 
-        from_date=week_start.isoformat(), 
-        to_date=week_end.isoformat()
+        from_date=week_start,
+        to_date=week_end
     )
 
     st.divider()

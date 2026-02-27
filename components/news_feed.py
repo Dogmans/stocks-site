@@ -17,10 +17,10 @@ def news_feed(symbols, max_articles=10, today_only=False, show_header=True):
         st.info("No symbols provided for news feed.")
         return
 
-    news = get_news(symbols, max_articles)
     if today_only:
-        today_str = datetime.now().strftime("%Y-%m-%d")
-        news = [n for n in news if n.get("publishedDate", "").startswith(today_str)]
+        news = get_news(symbols, max_articles=max_articles)
+    else:
+        news = get_news(symbols, from_date=datetime.date.today() - datetime.timedelta(days=7), max_articles=max_articles)
     if not news:
         st.info("No news articles found for the selected symbols.")
         return

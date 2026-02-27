@@ -8,6 +8,7 @@ import requests
 from dateutil import parser
 from pydantic import BaseModel
 from gliner import GLiNER
+from sympy import symbols
 from config import API_KEY, API_BASE, DISK_CACHE_PATH
 
 logger = logging.getLogger(__name__)
@@ -155,7 +156,7 @@ def get_historical(symbol, period):
     return []
 
 
-def get_news(symbols, max_articles=10):
+def get_news(symbols, from_date: datetime.date=datetime.date.today(), to_date: datetime.date=datetime.date.today(), max_articles=10):
     """
     Fetch news for one or more symbols. Returns a list of news articles.
     If multiple symbols, deduplicates by URL.
@@ -165,9 +166,16 @@ def get_news(symbols, max_articles=10):
     if not symbols:
         return []
     news = []
+    params = {
+        "limit": max_articles
+    }
+    if from_date:
+        params["from"] = from_date.isoformat()
+    if to_date:
+        params["to"] = to_date.isoformat()
     if len(symbols) == 1:
         url = f"{API_BASE}/news/stock"
-        params = {"symbols": symbols[0], "limit": max_articles}
+        params["symbols"] = symbols[0]
         if resp:= make_authorised_request(url, params):
             news = resp
     else:
@@ -175,7 +183,7 @@ def get_news(symbols, max_articles=10):
         seen_urls = set()
         url = f"{API_BASE}/news/stock"
         for symbol in symbols:
-            params = {"symbols": [symbol], "limit": max_articles}
+            params["symbols"] = [symbol]
             if resp := make_authorised_request(url, params):
                 for article in resp:
                     url_key = article.get("url")
@@ -192,6 +200,52 @@ class Event(BaseModel):
     type: str
     symbol: str
     url: str
+
+
+def get_events_from_news(symbols, from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
+    '''
+        1. Fetch news articles for the given symbols.
+        2. Use GLiNER to extract entities related to events (Financial Conference, Tech Expo, Date, Company, Announcement).
+        3. Filter and structure the extracted information into Event objects.
+        4. Return a list of Event objects
+    '''    
+    
+    events = []
+    labels = ["Financial Conference", "Tech Expo", "Date", "Company", "Announcement"]
+    resp = get_news(symbols.keys(), from_date=from_date, to_date=to_date, max_articles=100)  # Get more news to increase chances of finding events
+    for item in resp:
+        title = item.get("title", "")
+        text = item.get("text", "")
+        combined_text = f"{title} {text}"
+        clean_date = None
+        event_found = False
+        org_found = False
+        event_name = "Press Release"
+        entities = model.predict_entities(combined_text, labels, threshold=0.5)
+        for ent in entities:
+            if ent['label'] == "Financial Conference" or ent['label'] == "Tech Expo":
+                event_name = ent['text']
+                event_found = True
+            elif ent['label'] == "Company":
+                org_found = True
+            elif ent['label'] == "Date":
+                try:
+                    # Take the latest date mentioned in the text as the event date, since press release will also be dated and we want the actual event date
+                    incoming_date = parser.parse(ent['text']).date().isoformat()
+                    if clean_date is None or incoming_date > clean_date:
+                        clean_date = incoming_date
+                except Exception:
+                    pass
+            if clean_date and event_found and org_found:
+                events.append(Event(
+                    date=clean_date,
+                    name=event_name,
+                    type="event",
+                    symbol=item["symbol"],
+                    url=item["url"]
+                ))
+                break
+    return events
 
 
 @st.cache_data
@@ -226,9 +280,9 @@ def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: date
 
     params = {}
     if from_date:
-        params["from"] = from_date.isoformat() if isinstance(from_date, datetime.date) else from_date
+        params["from"] = from_date.isoformat()
     if to_date:
-        params["to"] = to_date.isoformat() if isinstance(to_date, datetime.date) else to_date
+        params["to"] = to_date.isoformat()
     for src in event_sources:
         resp = make_authorised_request(src["url"], params)
         if resp:
@@ -242,38 +296,8 @@ def get_events_for_symbols(symbols, from_date: datetime.date=None, to_date: date
                 ))
 
     # Treat news differently since we have to filter text to determine if it's a relevant event
-    resp = get_news(symbols.keys(), max_articles=100)  # Get more news to increase chances of finding events
-    if resp:
-        labels = ["Financial Conference", "Tech Expo", "Date", "Company", "Announcement"]
-        for item in resp:
-            title = item.get("title", "")
-            text = item.get("text", "")
-            combined_text = f"{title} {text}"
-            entities = model.predict_entities(combined_text, labels, threshold=0.5)
-            clean_date = None
-            event_found = False
-            org_found = False
-            event_name = "Press Release"
-            for ent in entities:
-                if ent['label'] == "Financial Conference" or ent['label'] == "Tech Expo":
-                    event_name = ent['text']
-                    event_found = True
-                elif ent['label'] == "Company":
-                    org_found = True
-                elif ent['label'] == "Date":
-                    try:
-                        clean_date = parser.parse(ent['text']).date().isoformat()
-                    except Exception:
-                        pass
-                if clean_date and event_found and org_found:
-                    events.append(Event(
-                        date=clean_date,
-                        name=event_name,
-                        type="event",
-                        symbol=item["symbol"],
-                        url=item["url"]
-                    ))
-                    break
+    # Therefore we need to get old press releases prior to the from_date to catch any events that are announced well in advance
+    events.extend(get_events_from_news(symbols, from_date=from_date - datetime.timedelta(days=30), to_date=to_date))
 
     # Filter to only include events for our symbols
     events = [e for e in events if e.symbol in symbols]
