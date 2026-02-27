@@ -1,5 +1,3 @@
-import streamlit as st
-
 import diskcache
 import datetime
 import logging
@@ -8,7 +6,10 @@ import requests
 from dateutil import parser
 from pydantic import BaseModel
 from gliner import GLiNER
-from sympy import symbols
+import nltk
+nltk.download('punkt')
+import streamlit as st
+
 from config import API_KEY, API_BASE, DISK_CACHE_PATH
 
 logger = logging.getLogger(__name__)
@@ -203,48 +204,71 @@ class Event(BaseModel):
 
 
 def get_events_from_news(symbols, from_date: datetime.date=None, to_date: datetime.date=None) -> list[Event]:
-    '''
-        1. Fetch news articles for the given symbols.
-        2. Use GLiNER to extract entities related to events (Financial Conference, Tech Expo, Date, Company, Announcement).
-        3. Filter and structure the extracted information into Event objects.
-        4. Return a list of Event objects
-    '''    
-    
+    """
+    1. Fetch news articles.
+    2. Split text into individual sentences.
+    3. Use GLiNER to find sentences containing BOTH a Company and an Event (Conference/Expo).
+    4. Extract the date from that specific context.
+    """
     events = []
-    labels = ["Financial Conference", "Tech Expo", "Date", "Company", "Announcement"]
-    resp = get_news(symbols.keys(), from_date=from_date, to_date=to_date, max_articles=100)  # Get more news to increase chances of finding events
+    # Added "Investment Analysis" to catch noise and prevent false positive event matches
+    labels = ["Conference", "Expo", "Date", "Company", "Investment Analysis"]
+    
+    # Fetch news (keys() if symbols is a dict as per your original code)
+    query_symbols = symbols.keys() if isinstance(symbols, dict) else symbols
+    resp = get_news(query_symbols, from_date=from_date, to_date=to_date, max_articles=50)
+
     for item in resp:
         title = item.get("title", "")
-        text = item.get("text", "")
-        combined_text = f"{title} {text}"
-        clean_date = None
-        event_found = False
-        org_found = False
-        event_name = "Press Release"
-        entities = model.predict_entities(combined_text, labels, threshold=0.5)
-        for ent in entities:
-            if ent['label'] == "Financial Conference" or ent['label'] == "Tech Expo":
-                event_name = ent['text']
-                event_found = True
-            elif ent['label'] == "Company":
-                org_found = True
-            elif ent['label'] == "Date":
+        body = item.get("text", "")
+        full_text = f"{title}. {body}"
+        
+        # Split into sentences to ensure entity proximity
+        sentences = nltk.sent_tokenize(full_text)
+        
+        for sentence in sentences:
+            # We use a slightly higher threshold to be more selective
+            entities = model.predict_entities(sentence, labels, threshold=0.6)
+            
+            # Map found entities for this specific sentence
+            found = {}
+            for ent in entities:
+                found[ent['label']] = ent['text']
+
+            # LOGIC GATE: 
+            # A sentence is only an 'Event' if it has an Org AND an Event type.
+            # This ignores sentences that are just general 'Investment Analysis'.
+            has_org = "Company" in found
+            has_event = "Conference" in found or "Expo" in found
+            
+            if has_org and has_event:
+                # 1. Determine the Date
+                # If a date is in the same sentence, use it. 
+                # Otherwise, fallback to the article's publication date.
                 try:
-                    # Take the latest date mentioned in the text as the event date, since press release will also be dated and we want the actual event date
-                    incoming_date = parser.parse(ent['text']).date().isoformat()
-                    if clean_date is None or incoming_date > clean_date:
-                        clean_date = incoming_date
+                    if "Date" in found:
+                        event_date = parser.parse(found["Date"]).date().isoformat()
+                    else:
+                        # Fallback to the news item's date
+                        event_date = parser.parse(item.get("date", str(datetime.date.today()))).date().isoformat()
                 except Exception:
-                    pass
-            if clean_date and event_found and org_found:
+                    continue # Skip if date is garbled
+
+                # 2. Extract Event Name
+                event_name = found.get("Conference") or found.get("Expo")
+
                 events.append(Event(
-                    date=clean_date,
+                    date=event_date,
                     name=event_name,
                     type="event",
                     symbol=item["symbol"],
                     url=item["url"]
                 ))
-                break
+                
+                # Once we find a valid event in a sentence, we can stop 
+                # scanning this specific article to avoid duplicates.
+                break 
+
     return events
 
 
