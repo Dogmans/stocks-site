@@ -7,7 +7,8 @@ from dateutil import parser
 from pydantic import BaseModel
 from gliner import GLiNER
 import nltk
-nltk.download('punkt')
+nltk.download('punkt_tab')
+import torch
 import streamlit as st
 
 from config import API_KEY, API_BASE, DISK_CACHE_PATH
@@ -17,6 +18,7 @@ logger = logging.getLogger(__name__)
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
 model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
+model.to("cuda" if torch.cuda.is_available() else "cpu")
 
 
 class GainerLoser(BaseModel):
