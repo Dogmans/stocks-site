@@ -18,7 +18,11 @@ logger = logging.getLogger(__name__)
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
 model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
-model.to("cuda" if torch.cuda.is_available() else "cpu")
+if torch.cuda.is_available():
+    logger.info("CUDA is available. Moving GLiNER model to GPU.")
+    model.to("cuda")
+else:
+    logger.warning("CUDA is not available. Using CPU for GLiNER model.")
 
 
 class GainerLoser(BaseModel):
@@ -227,14 +231,13 @@ def get_events_from_news(symbols, from_date: datetime.date=None, to_date: dateti
         
         # Split into sentences to ensure entity proximity
         sentences = nltk.sent_tokenize(full_text)
-        
-        for sentence in sentences:
-            # We use a slightly higher threshold to be more selective
-            entities = model.predict_entities(sentence, labels, threshold=0.6)
+        results_list = model.batch_predict_entities(sentences, labels, threshold=0.6)
+
+        for sentence_entities in results_list:
             
             # Map found entities for this specific sentence
             found = {}
-            for ent in entities:
+            for ent in sentence_entities:
                 found[ent['label']] = ent['text']
 
             # LOGIC GATE: 
