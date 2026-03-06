@@ -9,6 +9,7 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 - Live market data and featured tickers
 - Watchlist management
 - Detailed company profiles and quotes
+- Tabbed stock screener page with multiple integrated strategy views
 - Filings/documents tab (SEC filings, 10-K, 10-Q, etc.) with accordion UI
 - News tab showing latest articles in accordion UI
 - Custom navigation and error handling
@@ -21,6 +22,9 @@ This project is a Streamlit-based web application for visualizing stocks, ETFs, 
 ├── components/           # UI widgets (price_widget, news_feed, etc.)
 ├── pages/                # Streamlit multipage app pages
 │   ├── calendar.py       # Calendar page for stock-related events
+│   ├── screener.py       # Tabbed screener page
+├── screeners/            # Integrated strategy logic
+│   ├── strategies.py     # Screener universe + strategy scoring
 ├── fmp_api.py            # All Financial Modeling Prep API logic (quotes, search, news, filings, etc.)
 ├── store.py              # PersistentDict for watchlist/session
 ├── requirements.txt      # Python dependencies

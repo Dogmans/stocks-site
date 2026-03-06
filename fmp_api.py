@@ -15,6 +15,9 @@ from config import API_KEY, API_BASE, DISK_CACHE_PATH
 
 logger = logging.getLogger(__name__)
 
+API_BASE_V3 = "https://financialmodelingprep.com/api/v3"
+API_BASE_V4 = "https://financialmodelingprep.com/api/v4"
+
 cache = diskcache.Cache(DISK_CACHE_PATH)
 
 model = GLiNER.from_pretrained("urchade/gliner_small-v2.1")
@@ -362,4 +365,103 @@ def search_symbol(query):
     params = {"query": query, "limit": 10}
     if resp := make_authorised_request(url, params):
         return resp
+    return []
+
+
+def get_stock_screener_universe(limit: int = 100, exchange: str = "NASDAQ,NYSE"):
+    """
+    Fetch a stock universe from FMP stock-screener endpoint.
+    Returns a list of stock dicts.
+    """
+    url = f"{API_BASE_V3}/stock-screener"
+    params = {
+        "limit": limit,
+        "exchange": exchange,
+        "isEtf": False,
+        "isFund": False,
+    }
+    if resp := make_authorised_request(url, params):
+        return resp
+    return []
+
+
+def get_quote(symbol: str):
+    """
+    Fetch latest quote for a symbol.
+    Returns a single quote dict or None.
+    """
+    url = f"{API_BASE_V3}/quote/{symbol}"
+    if resp := make_authorised_request(url):
+        if isinstance(resp, list) and resp:
+            return resp[0]
+    return None
+
+
+def get_ratios_ttm(symbol: str):
+    """
+    Fetch TTM ratios for a symbol.
+    Returns a single ratios dict or None.
+    """
+    url = f"{API_BASE_V3}/ratios-ttm/{symbol}"
+    if resp := make_authorised_request(url):
+        if isinstance(resp, list) and resp:
+            return resp[0]
+    return None
+
+
+def get_key_metrics_ttm(symbol: str):
+    """
+    Fetch TTM key metrics for a symbol.
+    Returns a single metrics dict or None.
+    """
+    url = f"{API_BASE_V3}/key-metrics-ttm/{symbol}"
+    if resp := make_authorised_request(url):
+        if isinstance(resp, list) and resp:
+            return resp[0]
+    return None
+
+
+def get_historical_daily(symbol: str, timeseries: int = 260):
+    """
+    Fetch daily historical candles for a symbol.
+    Returns a list of candle dicts (most recent first in API response).
+    """
+    url = f"{API_BASE_V3}/historical-price-full/{symbol}"
+    params = {"timeseries": timeseries}
+    if resp := make_authorised_request(url, params):
+        historical = resp.get("historical") if isinstance(resp, dict) else None
+        if isinstance(historical, list):
+            return historical
+    return []
+
+
+def get_analyst_recommendations(symbol: str, limit: int = 60):
+    """
+    Fetch analyst recommendation changes for a symbol.
+    Returns a list of recommendation rows.
+    """
+    url = f"{API_BASE_V3}/analyst-stock-recommendations/{symbol}"
+    params = {"limit": limit}
+    if resp := make_authorised_request(url, params):
+        if isinstance(resp, list):
+            return resp
+    return []
+
+
+def get_insider_trading(symbol: str, limit: int = 100):
+    """
+    Fetch insider trading records for a symbol.
+    Tries v4 first, then v3 fallback.
+    Returns a list of insider trades.
+    """
+    v4_url = f"{API_BASE_V4}/insider-trading"
+    if resp := make_authorised_request(v4_url, {"symbol": symbol, "limit": limit}):
+        if isinstance(resp, list):
+            return resp
+
+    v3_url = f"{API_BASE_V3}/insider-trading"
+    if resp := make_authorised_request(v3_url, {"symbol": symbol, "limit": limit}):
+        if isinstance(resp, list):
+            return resp
+
     return []

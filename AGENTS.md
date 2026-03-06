@@ -1,7 +1,7 @@
 # AGENTS.md — Investing App
 
 ## What This Project Does
-A Streamlit web app for searching, visualizing, and tracking stocks, ETFs, and indices with live data from Financial Modeling Prep. Features include search/autocomplete, watchlist, detailed quotes, news, and filings.
+A Streamlit web app for searching, visualizing, and tracking stocks, ETFs, and indices with live data from Financial Modeling Prep. Features include search/autocomplete, watchlist, detailed quotes, news, filings, and multi-strategy screeners.
 
 ## Dev Environment
 - Runtime: Python 3.10+
@@ -21,7 +21,11 @@ A Streamlit web app for searching, visualizing, and tracking stocks, ETFs, and i
 - `components/` — UI widgets (e.g., price_widget, news_feed)
 - `pages/` — Streamlit multipage app pages
 	- `calendar.py` — Calendar page for stock-related events
+	- `screener.py` — Tabbed screener page for integrated screening strategies
+- `screeners/` — Strategy logic integrated from stock-pipeline patterns
+	- `strategies.py` — Screener universe loading, metric snapshots, and strategy scoring functions
 - `fmp_api.py` — All Financial Modeling Prep API logic (quotes, search, news, filings, etc.)
+- `_holding/stock-pipeline/` — Downloaded reference repository used to derive strategy behavior
 - `store.py` — PersistentDict for watchlist/session
 - `requirements.txt` — Python dependencies
 - `README.md` — Human onboarding

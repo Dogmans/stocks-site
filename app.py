@@ -8,6 +8,7 @@ from pages.gainers_losers import render_gainers_losers
 from pages.home import render_home
 from pages.markets import render_markets
 from pages.detail import render_detail
+from pages.screener import render_screener
 from queries import handle_query_params
 
 st.set_page_config(page_title="Stock & ETF Visualizer", layout="wide")
@@ -37,6 +38,7 @@ st.markdown("""
 PAGES = {
     "Home": render_home,
     "Gainers & Losers": render_gainers_losers,
+    "Screener": render_screener,
     "Calendar": render_calendar,
     "Markets Overview": render_markets,
     "Stock/ETF Detail": render_detail
